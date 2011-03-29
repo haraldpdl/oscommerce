@@ -203,7 +203,7 @@
 
       if ( !$osC_Database->isError() ) {
         if ( $data['notify_customer'] === true ) {
-          $email_body = sprintf($osC_Language->get('email_body'), STORE_NAME, $id, osc_href_link(FILENAME_CATALOG_ACCOUNT_HISTORY_INFO, 'order_id=' . $id, 'SSL', false, false, true), osC_DateTime::getLong($Qorder->value('date_purchased'))) . "\n\n";
+          $email_body = sprintf($osC_Language->get('email_body'), STORE_NAME, $id, osc_href_link(FILENAME_ACCOUNT, 'orders=' . $id, 'SSL', false, false, true), osC_DateTime::getLong($Qorder->value('date_purchased'))) . "\n\n";
 
           if ( $data['append_comment'] === true ) {
             $email_body .= sprintf($osC_Language->get('email_body_comment'), $data['comment']) . "\n\n";
