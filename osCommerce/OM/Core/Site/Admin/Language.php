@@ -67,7 +67,7 @@
 
             $ini_array[$key] = $value;
           } elseif ( isset($key) ) {
-            $ini_array[$key] .= trim($line);
+            $ini_array[$key] .= "\n" . trim($line);
           }
         }
       }
