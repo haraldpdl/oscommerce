@@ -26,7 +26,19 @@
         $installed[] = $module['code'];
       }
 
-      $result = array('entries' => array());
+      $modules = array();
+
+      $DLsm = new DirectoryListing(OSCOM::BASE_DIRECTORY . 'Custom/Site/Admin/Module/Service');
+      $DLsm->setIncludeFiles(false);
+      $DLsm->setIncludeDirectories(true);
+
+      foreach ( $DLsm->getFiles() as $file ) {
+        $module = $file['name'];
+
+        if ( !in_array($module, $installed) ) {
+          $modules[] = $module;
+        }
+      }
 
       $DLsm = new DirectoryListing(OSCOM::BASE_DIRECTORY . 'Core/Site/Admin/Module/Service');
       $DLsm->setIncludeFiles(false);
@@ -35,14 +47,20 @@
       foreach ( $DLsm->getFiles() as $file ) {
         $module = $file['name'];
 
-        if ( !in_array($module, $installed) ) {
-          $class = 'osCommerce\\OM\\Core\\Site\\Admin\\Module\\Service\\' . $module . '\\Controller';
-
-          $OSCOM_SM = new $class();
-
-          $result['entries'][] = array('code' => $OSCOM_SM->getCode(),
-                                       'title' => $OSCOM_SM->getTitle());
+        if ( !in_array($module, $modules) && !in_array($module, $installed) ) {
+          $modules[] = $module;
         }
+      }
+
+      $result = array('entries' => array());
+
+      foreach ( $modules as $module ) {
+        $class = 'osCommerce\\OM\\Core\\Site\\Admin\\Module\\Service\\' . $module . '\\Controller';
+
+        $OSCOM_SM = new $class();
+
+        $result['entries'][] = array('code' => $OSCOM_SM->getCode(),
+                                     'title' => $OSCOM_SM->getTitle());
       }
 
       $result['total'] = count($result['entries']);
