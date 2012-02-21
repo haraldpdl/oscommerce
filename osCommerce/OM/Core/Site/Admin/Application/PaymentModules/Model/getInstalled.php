@@ -2,7 +2,7 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
@@ -18,7 +18,7 @@
       $result = OSCOM::callDB('Admin\PaymentModules\GetAll');
 
       foreach ( $result['entries'] as &$module ) {
-        $class = 'osCommerce\\OM\\Core\\Site\\Admin\\Module\\Payment\\' . $module['code'];
+        $class = 'osCommerce\\OM\\Core\\Site\\Admin\\Module\\Payment\\' . $module['code'] . '\\Controller';
 
         $OSCOM_Language->injectDefinitions('modules/payment/' . $module['code'] . '.xml');
 

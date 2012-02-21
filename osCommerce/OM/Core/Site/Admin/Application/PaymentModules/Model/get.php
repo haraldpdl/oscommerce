@@ -2,7 +2,7 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
@@ -14,7 +14,7 @@
     public static function execute($code) {
       $OSCOM_Language = Registry::get('Language');
 
-      $class = 'osCommerce\\OM\\Core\\Site\\Admin\\Module\\Payment\\' . $code;
+      $class = 'osCommerce\\OM\\Core\\Site\\Admin\\Module\\Payment\\' . $code . '\\Controller';
 
       $OSCOM_Language->injectDefinitions('modules/payment/' . $code . '.xml');
 

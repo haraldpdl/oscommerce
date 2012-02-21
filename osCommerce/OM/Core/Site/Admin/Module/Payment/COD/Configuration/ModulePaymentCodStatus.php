@@ -6,7 +6,7 @@
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
-  namespace osCommerce\OM\Core\Site\Admin\Module\Configuration;
+  namespace osCommerce\OM\Core\Site\Admin\Module\Payment\COD\Configuration;
 
   use osCommerce\OM\Core\HTML;
   use osCommerce\OM\Core\OSCOM;
@@ -18,6 +18,10 @@
   class ModulePaymentCodStatus extends \osCommerce\OM\Core\Site\Admin\Module\ConfigurationAbstract {
     protected $_param_enabled;
     protected $_param_disabled;
+
+    static protected $_sort = 100;
+    static protected $_default = '-1';
+    static protected $_group_id = 6;
 
     public function initialize() {
       $this->_param_enabled = OSCOM::getDef('parameter_enabled');

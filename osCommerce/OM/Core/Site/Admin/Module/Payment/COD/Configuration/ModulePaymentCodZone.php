@@ -6,7 +6,7 @@
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
-  namespace osCommerce\OM\Core\Site\Admin\Module\Configuration;
+  namespace osCommerce\OM\Core\Site\Admin\Module\Payment\COD\Configuration;
 
   use osCommerce\OM\Core\HTML;
   use osCommerce\OM\Core\OSCOM;
@@ -17,6 +17,10 @@
  */
 
   class ModulePaymentCodZone extends \osCommerce\OM\Core\Site\Admin\Module\ConfigurationAbstract {
+    static protected $_sort = 200;
+    static protected $_default = '0';
+    static protected $_group_id = 6;
+
     public function initialize() { }
 
     public function get() {
