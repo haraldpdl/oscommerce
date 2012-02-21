@@ -6,7 +6,7 @@
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
-  namespace osCommerce\OM\Core\Site\Admin\Module\Configuration;
+  namespace osCommerce\OM\Core\Site\Admin\Module\Shipping\Flat\Configuration;
 
   use osCommerce\OM\Core\HTML;
   use osCommerce\OM\Core\OSCOM;
@@ -17,6 +17,10 @@
  */
 
   class ModuleShippingFlatTaxClass extends \osCommerce\OM\Core\Site\Admin\Module\ConfigurationAbstract {
+    static protected $_sort = 300;
+    static protected $_default = '0';
+    static protected $_group_id = 6;
+
     public function initialize() { }
 
     public function get() {
