@@ -76,7 +76,7 @@
         $data = array('key' => 'MODULE_SERVICES_INSTALLED',
                       'value' => implode(';', $sm));
 
-        if ( OSCOM::callDB('Admin\Configuration\EntrySave', $data) ) {
+        if ( OSCOM::callDB('Admin\UpdateConfigurationParameters', $data, 'Site') ) {
           Cache::clear('configuration');
 
           return true;
