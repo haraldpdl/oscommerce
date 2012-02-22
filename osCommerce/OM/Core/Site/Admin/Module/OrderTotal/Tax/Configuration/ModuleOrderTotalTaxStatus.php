@@ -6,7 +6,7 @@
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
-  namespace osCommerce\OM\Core\Site\Admin\Module\Configuration;
+  namespace osCommerce\OM\Core\Site\Admin\Module\OrderTotal\Tax\Configuration;
 
   use osCommerce\OM\Core\HTML;
   use osCommerce\OM\Core\OSCOM;
@@ -18,6 +18,10 @@
   class ModuleOrderTotalTaxStatus extends \osCommerce\OM\Core\Site\Admin\Module\ConfigurationAbstract {
     protected $_param_true;
     protected $_param_false;
+
+    static protected $_sort = 100;
+    static protected $_default = 'true';
+    static protected $_group_id = 6;
 
     public function initialize() {
       $this->_param_true = OSCOM::getDef('parameter_true');
