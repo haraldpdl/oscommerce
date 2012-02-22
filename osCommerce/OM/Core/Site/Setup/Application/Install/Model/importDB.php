@@ -48,6 +48,37 @@
         }
       }
 
+// Import Configuration modules
+
+      $modules = array();
+
+      $DL = new DirectoryListing(OSCOM::BASE_DIRECTORY . 'Core/Site/Admin/Module/Configuration');
+      $DL->setIncludeDirectories(false);
+      $DL->setCheckExtension('php');
+
+      foreach ( $DL->getFiles() as $file ) {
+        $modules[] = substr($file['name'], 0, strpos($file['name'], '.'));
+      }
+
+      $DL = new DirectoryListing(OSCOM::BASE_DIRECTORY . 'Custom/Site/Admin/Module/Configuration');
+      $DL->setIncludeDirectories(false);
+      $DL->setCheckExtension('php');
+
+      foreach ( $DL->getFiles() as $file ) {
+        $module = substr($file['name'], 0, strpos($file['name'], '.'));
+
+        if ( !in_array($module, $modules) ) {
+          $modules[] = $module;
+        }
+      }
+
+      foreach ( $modules as $cfg_module ) {
+        $class = 'osCommerce\\OM\\Core\\Site\\Admin\\Module\\Configuration\\' . $cfg_module;
+
+        $module = new $class();
+        $module->install();
+      }
+
 // Import Service modules
 
       $services = array('OutputCompression',
@@ -123,10 +154,8 @@
         unset($array_position);
       }
 
-      $cfg_data = array('title' => 'Service Modules',
-                        'key' => 'MODULE_SERVICES_INSTALLED',
+      $cfg_data = array('key' => 'MODULE_SERVICES_INSTALLED',
                         'value' => implode(';', $installed),
-                        'description' => 'Installed services modules',
                         'group_id' => '6');
 
       OSCOM::callDB('Admin\InsertConfigurationParameters', $cfg_data, 'Site');
@@ -135,7 +164,7 @@
 
       define('DEFAULT_ORDERS_STATUS_ID', 1);
 
-      $module = new \osCommerce\OM\Core\Site\Admin\Module\Payment\COD();
+      $module = new \osCommerce\OM\Core\Site\Admin\Module\Payment\COD\Controller();
       $module->install();
 
       $pm_data = array('key' => 'MODULE_PAYMENT_COD_STATUS',
@@ -145,21 +174,26 @@
 
 // Import Shipping modules
 
-      $module = new \osCommerce\OM\Core\Site\Admin\Module\Shipping\Flat();
+      $module = new \osCommerce\OM\Core\Site\Admin\Module\Shipping\Flat\Controller();
       $module->install();
+
+      $sm_data = array('key' => 'MODULE_SHIPPING_FLAT_STATUS',
+                       'value' => 'True');
+
+      OSCOM::callDB('Admin\UpdateConfigurationParameters', $sm_data, 'Site');
 
 // Import Order Total modules
 
-      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\SubTotal();
+      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\SubTotal\Controller();
       $module->install();
 
-      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\Shipping();
+      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\Shipping\Controller();
       $module->install();
 
-      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\Tax();
+      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\Tax\Controller();
       $module->install();
 
-      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\Total();
+      $module = new \osCommerce\OM\Core\Site\Admin\Module\OrderTotal\Total\Controller();
       $module->install();
 
 // Import Foreign Keys
