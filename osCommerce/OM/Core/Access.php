@@ -2,53 +2,17 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
   namespace osCommerce\OM\Core;
 
 /**
- * The osC_Access manages the permission levels of administrators who have access to the Administration Tool
+ * The Access class manages Application permission levels of a Site
  */
 
   class Access {
-
-/**
- * Holds the group code for the current access module
- *
- * @var string
- * @access protected
- */
-
-    protected $_group = 'misc';
-
-/**
- * Holds the icon for the current access module
- *
- * @var string
- * @access protected
- */
-
-    protected $_icon = 'default.png';
-
-/**
- * Holds the title of the current access module
- *
- * @var string
- * @access protected
- */
-
-    protected $_title;
-
-/**
- * Holds the sort ordering number for the current access module
- *
- * @var int
- * @access protected
- */
-
-    protected $_sort_order = 0;
 
 /**
  * Return the Administration Tool Application modules the administrator has access to
@@ -59,7 +23,7 @@
  */
 
     public static function getUserLevels($id, $site = null) {
-      if ( empty($site) ) {
+      if ( !isset($site) ) {
         $site = OSCOM::getSite();
       }
 
@@ -78,7 +42,7 @@
         $DLapps->setIncludeFiles(false);
 
         foreach ( $DLapps->getFiles() as $file ) {
-          if ( preg_match('/[A-Z]/', substr($file['name'], 0, 1)) && !in_array($file['name'], call_user_func(array('osCommerce\\OM\\Core\\Site\\' . $site . '\\Controller', 'getGuestApplications'))) && file_exists($DLapps->getDirectory() . '/' . $file['name'] . '/Controller.php') ) { // HPDL remove preg_match
+          if ( !in_array($file['name'], call_user_func(array('osCommerce\\OM\\Core\\Site\\' . $site . '\\Controller', 'getGuestApplications'))) && file_exists($DLapps->getDirectory() . '/' . $file['name'] . '/Controller.php') ) {
             $applications[] = $file['name'];
           }
         }
@@ -126,7 +90,7 @@
     }
 
     public static function getShortcuts($site = null) {
-      if ( empty($site) ) {
+      if ( !isset($site) ) {
         $site = OSCOM::getSite();
       }
 
@@ -146,7 +110,7 @@
     }
 
     public static function hasShortcut($site = null) {
-      if ( empty($site) ) {
+      if ( !isset($site) ) {
         $site = OSCOM::getSite();
       }
 
@@ -162,7 +126,7 @@
     }
 
     public static function isShortcut($application, $site = null) {
-      if ( empty($site) ) {
+      if ( !isset($site) ) {
         $site = OSCOM::getSite();
       }
 
@@ -173,12 +137,16 @@
       return false;
     }
 
-    public static function getLevels($group = null) {
+    public static function getLevels($group = null, $site = null) {
+      if ( !isset($site) ) {
+        $site = OSCOM::getSite();
+      }
+
       $access = array();
 
-      if ( isset($_SESSION['Admin']['id']) && isset($_SESSION['Admin']['access']) ) {
-        foreach ( $_SESSION['Admin']['access'] as $module => $data ) {
-          if ( ($data['linkable'] === true) && (empty($group) || ($group == $data['group'])) ) {
+      if ( isset($_SESSION[$site]['id']) && isset($_SESSION[$site]['access']) ) {
+        foreach ( $_SESSION[$site]['access'] as $module => $data ) {
+          if ( ($data['linkable'] === true) && (!isset($group) || ($group == $data['group'])) ) {
             if ( !isset($access[$data['group']][$data['sort_order']]) ) {
               $access[$data['group']][$data['sort_order']] = $data;
             } else {
@@ -197,26 +165,6 @@
       return $access;
     }
 
-    function getModule() {
-      return $this->_module;
-    }
-
-    public static function getGroup($module = null) {
-      if ( empty($module) && isset($this) ) { // HPDL to remove
-        return $this->_group;
-      }
-
-      foreach ( self::getLevels() as $group => $links ) {
-        foreach ( $links as $link ) {
-          if ( $link['module'] == $module ) {
-            return $group;
-          }
-        }
-      }
-
-      return false;
-    }
-
     public static function getGroupTitle($group) {
       $OSCOM_Language = Registry::get('Language');
 
@@ -225,18 +173,6 @@
       }
 
       return $OSCOM_Language->get('access_group_' . $group . '_title');
-    }
-
-    function getIcon() {
-      return $this->_icon;
-    }
-
-    function getTitle() {
-      return $this->_title;
-    }
-
-    function getSortOrder() {
-      return $this->_sort_order;
     }
 
     public static function hasAccess($site, $application) {

@@ -2,7 +2,7 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
@@ -36,9 +36,17 @@
       Registry::set('Language', new Language());
 
       if ( !self::hasAccess(OSCOM::getSiteApplication()) ) {
-        Registry::get('MessageStack')->add('header', 'No access.', 'error');
+        if ( !isset($_SESSION[OSCOM::getSite()]['id']) ) {
+          if ( OSCOM::getSiteApplication() != 'Login' ) {
+            $_SESSION[OSCOM::getSite()]['redirect_origin'] = OSCOM::getSiteApplication();
 
-        OSCOM::redirect(OSCOM::getLink(null, OSCOM::getDefaultSiteApplication()));
+            OSCOM::redirect(OSCOM::getLink(null, 'Login'));
+          }
+        } else {
+          Registry::get('MessageStack')->add('header', 'No access.', 'error');
+
+          OSCOM::redirect(OSCOM::getLink(null, OSCOM::getDefaultSiteApplication()));
+        }
       }
 
       $application = 'osCommerce\\OM\\Core\\Site\\Admin\\Application\\' . OSCOM::getSiteApplication() . '\\Controller';
@@ -98,21 +106,7 @@
     }
 
     public static function hasAccess($application) {
-      if ( !isset($_SESSION[OSCOM::getSite()]['id']) ) {
-        $redirect = false;
-
-        if ( $application != 'Login' ) {
-          $_SESSION[OSCOM::getSite()]['redirect_origin'] = $application;
-
-          $redirect = true;
-        }
-
-        if ( $redirect === true ) {
-          OSCOM::redirect(OSCOM::getLink(null, 'Login'));
-        }
-      }
-
-      return Access::hasAccess(OSCOM::getSite(), $application);
+      return isset($_SESSION[OSCOM::getSite()]['id']) && Access::hasAccess(OSCOM::getSite(), $application);
     }
 
     public static function getGuestApplications() {
