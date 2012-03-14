@@ -2,7 +2,7 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
@@ -483,6 +483,10 @@
           $selection_text = '';
         }
 
+        if ( empty($selection_value) ) {
+          $selection_value = 'on';
+        }
+
         $field .= '<input type="' . static::output($type) . '" name="' . static::output($name) . '"';
 
         if ( strpos($parameters, 'id=') === false ) {
@@ -492,9 +496,7 @@
           $field .= ' id="' . static::output(substr($parameters, $offset+4, strpos($parameters, '"', $offset+4)-($offset+4))) . '_' . $counter . '"';
         }
 
-        if ( !is_null($selection_value) ) {
-          $field .= ' value="' . static::output($selection_value) . '"';
-        }
+        $field .= ' value="' . static::output($selection_value) . '"';
 
         if ( isset($default) && (($default === true) || (!is_array($default) && ((string)$default == (string)$selection_value)) || (is_array($default) && in_array($selection_value, $default))) ) {
           $field .= ' checked="checked"';
