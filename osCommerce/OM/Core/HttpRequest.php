@@ -13,7 +13,7 @@
 
 /**
  *
- * @param array $parameters url, header, parameters, method, certificate
+ * @param array $parameters url, header, parameters, method, cafile, certificate
  * @param string $driver
  */
 

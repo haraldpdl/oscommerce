@@ -2,7 +2,7 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
@@ -15,6 +15,10 @@
                                        'max_redirects' => 5,
                                        'content' => $parameters['parameters']));
 
+      if ( (strlen($options['http']['content']) < 1) && ($options['http']['method'] == 'POST') ) {
+        $options['http']['method'] = 'GET';
+      }
+
       if ( !isset($parameters['header']) ) {
         $parameters['header'] = array();
       }
@@ -23,13 +27,29 @@
 
       $options['http']['header'] = implode("\r\n", $parameters['header']);
 
-      if ( !empty($parameters['certificate']) ) {
-        $options['ssl'] = array('local_cert' => $parameters['certificate']);
+      if ( $parameters['server']['scheme'] === 'https' ) {
+        $options['ssl'] = array('verify_peer' => true);
+
+        if ( isset($parameters['cafile']) && file_exists($parameters['cafile']) ) {
+          $options['ssl']['cafile'] = $parameters['cafile'];
+        }
+
+        if ( isset($parameters['certificate']) ) {
+          $options['ssl']['local_cert'] = $parameters['certificate'];
+        }
       }
 
-      $context = stream_context_create($options);
+      $result = '';
 
-      return file_get_contents($parameters['url'], false, $context);
+      try {
+        $context = stream_context_create($options);
+
+        $result = file_get_contents($parameters['url'], false, $context);
+      } catch ( \Exception $e ) {
+        trigger_error($e->getMessage());
+      }
+
+      return $result;
     }
 
     public static function canUse() {

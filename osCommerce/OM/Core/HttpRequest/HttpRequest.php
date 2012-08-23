@@ -2,7 +2,7 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
@@ -23,9 +23,34 @@
         $h->setPostFields($post_params);
       }
 
-      $h->send();
+      if ( $parameters['server']['scheme'] === 'https' ) {
+        $h->addSslOptions(array('verifypeer' => true,
+                                'verifyhost' => true));
 
-      return $h->getResponseBody();
+        if ( isset($parameters['cafile']) && file_exists($parameters['cafile']) ) {
+          $h->addSslOptions(array('cainfo' => $parameters['cafile']));
+        }
+
+        if ( isset($parameters['certificate']) ) {
+          $h->addSslOptions(array('cert' => $parameters['certificate']));
+        }
+      }
+
+      $result = '';
+
+      try {
+        $h->send();
+
+        $result = $h->getResponseBody();
+      } catch ( \Exception $e ) {
+        if ( isset($e->innerException) ) {
+          trigger_error($e->innerException->getMessage());
+        } else {
+          trigger_error($e->getMessage());
+        }
+      }
+
+      return $result;
     }
 
     public static function canUse() {

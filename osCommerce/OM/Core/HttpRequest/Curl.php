@@ -2,7 +2,7 @@
 /**
  * osCommerce Online Merchant
  * 
- * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
+ * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
 
@@ -14,17 +14,22 @@
 
       $curl_options = array(CURLOPT_PORT => $parameters['server']['port'],
                             CURLOPT_HEADER => true,
-                            CURLOPT_SSL_VERIFYPEER => false,
+                            CURLOPT_SSL_VERIFYPEER => true,
+                            CURLOPT_SSL_VERIFYHOST => 2,
                             CURLOPT_RETURNTRANSFER => true,
                             CURLOPT_FORBID_REUSE => true,
                             CURLOPT_FRESH_CONNECT => true,
-                            CURLOPT_FOLLOWLOCATION => false);
+                            CURLOPT_FOLLOWLOCATION => false); // does not work with open_basedir so a workaround is implemented below
 
       if ( !empty($parameters['header']) ) {
         $curl_options[CURLOPT_HTTPHEADER] = $parameters['header'];
       }
 
-      if ( !empty($parameters['certificate']) ) {
+      if ( isset($parameters['cafile']) && file_exists($parameters['cafile']) ) {
+        $curl_options[CURLOPT_CAINFO] = $parameters['cafile'];
+      }
+
+      if ( isset($parameters['certificate']) ) {
         $curl_options[CURLOPT_SSLCERT] = $parameters['certificate'];
       }
 
@@ -35,6 +40,14 @@
 
       curl_setopt_array($curl, $curl_options);
       $result = curl_exec($curl);
+
+      if ( $result === false ) {
+        trigger_error(curl_error($curl));
+
+        curl_close($curl);
+
+        return false;
+      }
 
       $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
