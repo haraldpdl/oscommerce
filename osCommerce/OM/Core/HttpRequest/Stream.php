@@ -23,9 +23,14 @@
         $parameters['header'] = array();
       }
 
-      $parameters['header'][] = 'Content-type: application/x-www-form-urlencoded';
+      if ( $options['http']['method'] == 'POST' ) {
+        $parameters['header'][] = 'Content-Type: application/x-www-form-urlencoded';
+        $parameters['header'][] = 'Content-Length: ' . strlen($options['http']['content']);
+      }
 
-      $options['http']['header'] = implode("\r\n", $parameters['header']);
+      if ( !empty($parameters['header']) ) {
+        $options['http']['header'] = implode("\r\n", $parameters['header']);
+      }
 
       if ( $parameters['server']['scheme'] === 'https' ) {
         $options['ssl'] = array('verify_peer' => true);
