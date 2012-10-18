@@ -15,12 +15,20 @@
     public static function execute($parameters) {
       $h = new \HttpRequest($parameters['server']['scheme'] . '://' . $parameters['server']['host'] . $parameters['server']['path'] . (isset($parameters['server']['query']) ? '?' . $parameters['server']['query'] : ''), static::$_methods[$parameters['method']], array('redirect' => 5));
 
+      if ( isset($parameters['header']) ) {
+        $headers = array();
+
+        foreach ( $parameters['header'] as $header ) {
+          list($key, $value) = explode(':', $header, 2);
+
+          $headers[$key] = trim($value);
+        }
+
+        $h->setHeaders($headers);
+      }
+
       if ( $parameters['method'] == 'post' ) {
-        $post_params = array();
-
-        parse_str($parameters['parameters'], $post_params);
-
-        $h->setPostFields($post_params);
+        $h->setBody($parameters['parameters']);
       }
 
       if ( $parameters['server']['scheme'] === 'https' ) {
