@@ -1,31 +1,21 @@
 osCommerce Online Merchant
 
-(c) Copyright 2011 osCommerce; http://www.oscommerce.com
+(c) Copyright 2011-2012 osCommerce; http://www.oscommerce.com
 BSD License; http://www.oscommerce.com/bsdlicense.txt
 
 Welcome to osCommerce Online Merchant!
 
-We are ready to share our new foundation with you and are excited to disrupt the
-developer community with our future goals. The Countdown website used to promote
-v3.0 will remain online to keep the community informed of our actual plans and
-roadmap. The Countdown website can be reached at:
+osCommerce Online Merchant v3.0 is built on a new framework still in active
+development to start building onto with the community. v3.0 does not yet
+contain a full user feature set to be able to run an online store on. Now that
+the framework is stable, the missing features will be worked on and pushed
+through the new CoreUpdate delivery mechanism that can easily upgrade running
+installations.
 
-http://countdown.oscommerce.com
+Code submissions (including bug fixes) are subject to the following Contributor
+License Agreement (CLA):
 
-The v3.0 release focused primarily on freezing the new framework API to start
-building onto with the community. v3.0 does not contain a full user feature set
-to be able to run an online store on. Now that the framework is frozen, the
-missing features will be worked on and pushed through the new CoreUpdate
-delivery mechanism that can easily upgrade running installations.
-
-If you are interested in helping out, please don't forget to review our
-Contributor License Agreement at:
-
-http://countdown.oscommerce.com/index.php?Developers&CLA
-
-The Community Forum can be reached at:
-
-http://forums.oscommerce.com
+http://www.oscommerce.com/cla.txt
 
 We look forward to working with you in improving and extending osCommerce
 Online Merchant!
@@ -40,10 +30,12 @@ installed and configured, the Shop and Admin Sites can be reached with:
 http://demo.oscommerce.com/index.php (for Shop)
 http://demo.oscommerce.com/index.php?Admin (for Admin)
 
-Please note that the Setup Site is still reachable and should be deleted. This
-can be performed by deleting the following directory:
+Please note that the Setup Site is still reachable but is locked down. To
+unlock the Setup Site, remove the following from
+osCommerce/OM/Config/settings.ini:
 
-osCommerce/OM/Core/Site/Setup
+[Setup]
+offline = "true"
 
 For customizations, please copy the file with the same directory structure to
 the custom namespace located at:
