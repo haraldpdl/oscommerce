@@ -80,6 +80,22 @@
     }
 
 /**
+ * return the filemtime of cached file.
+ * @param string $key The key ID 
+ */
+    public function getModifiedSince($key)  {
+      $this->_key = $key;
+      
+      $filename = OSCOM::BASE_DIRECTORY . 'Work/Cache/' . $key . '.cache';
+      
+      if ( file_exists($filename) ) {
+        return filemtime($filename);
+      }
+      
+      return null;
+    } 
+    
+/**
  * Return the cached data
  *
  * @access public
