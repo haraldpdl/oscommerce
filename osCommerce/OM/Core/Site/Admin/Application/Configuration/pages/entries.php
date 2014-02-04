@@ -97,7 +97,7 @@
       newCell.innerHTML = htmlSpecialChars(record.configuration_title);
 
       var newCell = newRow.insertCell(1);
-      newCell.innerHTML = htmlSpecialChars(record.configuration_value).replace(/([^>]?)\n/g, '$1<br />\n'); // nl2br() in javascript
+      newCell.innerHTML = htmlSpecialChars(record.configuration_value.linebreak());
 
       newCell = newRow.insertCell(2);
       newCell.innerHTML = '<a href="' + configEditLink.replace('CONFIGID', parseInt(record.configuration_id)) + '">' + configEditLinkIcon + '</a>';

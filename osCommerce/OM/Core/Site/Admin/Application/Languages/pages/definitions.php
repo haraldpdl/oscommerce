@@ -100,7 +100,7 @@
       newCell.innerHTML = htmlSpecialChars(record.definition_key);
 
       var newCell = newRow.insertCell(1);
-      newCell.innerHTML = htmlSpecialChars(record.definition_value);
+      newCell.innerHTML = htmlSpecialChars(record.definition_value.linebreak());
 
       newCell = newRow.insertCell(2);
       newCell.innerHTML = '<a href="' + defEditLink.replace('DEFINITIONID', parseInt(record.id)) + '">' + defEditLinkIcon + '</a>&nbsp;<a href="' + defDeleteLink.replace('DEFINITIONID', parseInt(record.id)) + '">' + defDeleteLinkIcon + '</a>';

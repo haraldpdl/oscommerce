@@ -25,6 +25,7 @@ ALTER TABLE osc_languages engine = InnoDB;
 ALTER TABLE osc_languages_definitions engine = InnoDB;
 ALTER TABLE osc_manufacturers engine = InnoDB;
 ALTER TABLE osc_manufacturers_info engine = InnoDB;
+ALTER TABLE osc_modules engine = InnoDB;
 ALTER TABLE osc_newsletters engine = InnoDB;
 ALTER TABLE osc_newsletters_log engine = InnoDB;
 ALTER TABLE osc_orders engine = InnoDB;

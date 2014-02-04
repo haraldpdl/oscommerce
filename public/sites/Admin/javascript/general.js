@@ -172,12 +172,17 @@ function flagCheckboxes(element) {
   }
 }
 
+// nl2br() in javascript
+String.prototype.linebreak = function() {
+return (this).replace(/([^>]?)\r?\n|\r/g, '$1 <br />\n');
+}
+
 function htmlSpecialChars(string) {
   if ( string == null ) {
     string = '';
   }
 
-  return $('<span>').text(string).html();
+  return $('<span>').append(string).html();
 };
 
 /* Javascript version of osC_Tax::displayTaxRateValue() */

@@ -21,6 +21,7 @@ add_to = Add To
 remove_from = Remove From
 set_to = Set To
 global_access = Global Access
+access_modules = -- Access Modules --
 
 introduction_new_administrator = Please fill in the following information for the new administrator.
 

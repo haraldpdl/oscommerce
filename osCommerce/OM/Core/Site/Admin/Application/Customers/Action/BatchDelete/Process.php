@@ -21,12 +21,16 @@
     public static function execute(ApplicationAbstract $application) {
       $error = false;
 
-      foreach ( $_POST['batch'] as $id ) {
-        if ( !Customers::delete($id) ) {
-          $error = true;
-          break;
+        if( !empty($_POST['batch']) ){
+            foreach ( $_POST['batch'] as $id ) {
+              if( !Customers::delete($id) ) {
+                $error = true;
+                break;
+                }
+            }
+        }else{
+        $error = true;        
         }
-      }
 
       if ( $error === false ) {
         Registry::get('MessageStack')->add(null, OSCOM::getDef('ms_success_action_performed'), 'success');

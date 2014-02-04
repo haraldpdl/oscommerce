@@ -68,7 +68,11 @@
 
     $modulesList.append(sGroup); 
   });
-
+  
+  if(hasAccessTo.length == 0){ 
+      $('#modulesList :first').attr('selected', 'selected');
+  }
+ 
   if ( $.inArray('*', hasAccessTo) != -1 ) {
     $('#modulesList').val('0');
 

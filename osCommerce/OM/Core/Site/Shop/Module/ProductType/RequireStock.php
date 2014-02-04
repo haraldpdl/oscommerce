@@ -24,7 +24,7 @@
     public static function isValid(Product $OSCOM_Product) {
       $OSCOM_ShoppingCart = Registry::get('ShoppingCart');
 
-      return ( ($OSCOM_Product->getQuantity() - $OSCOM_ShoppingCart->getQuantity( $OSCOM_ShoppingCart->getBasketID($OSCOM_Product->getID()) ))  > 0 );
+      return ( ($OSCOM_Product->getQuantity() - $OSCOM_ShoppingCart->getQuantity( $OSCOM_ShoppingCart->getBasketID($OSCOM_Product->getID()) ))  >= 0 );
     }
 
     public static function onFail(Product $OSCOM_Product) {
