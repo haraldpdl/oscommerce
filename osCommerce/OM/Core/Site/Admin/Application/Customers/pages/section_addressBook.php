@@ -89,7 +89,7 @@
   }
 ?>
 
-      <li style="float: left; margin: 10px; padding: 10px; border: 1px solid #999; background-color: #e6f1f6; box-shadow: 4px 4px 8px #ccc; text-align: center;"><a href="#" onclick="showNewAddressForm(); return false;">Add New Address</a></li>
+      <li style="float: left; margin: 10px; padding: 10px; border: 1px solid #999; background-color: #e6f1f6; box-shadow: 4px 4px 8px #ccc; text-align: center;"><a href="#" onclick="showNewAddressForm(); return false;"><?php echo HTML::output(OSCOM::getDef('link_new_address')); ?></a></li>
     </ul>
 
     <div style="clear: both; padding: 5px;"></div>

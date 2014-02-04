@@ -40,6 +40,8 @@ field_telephone_number = Telephone Number:
 field_fax_number = Fax Number:
 field_set_as_primary = Set as Primary Address:
 
+link_new_address = Add New Address
+
 primary_address = Primary Address
 
 dialog_delete_customer_title = Delete Customer

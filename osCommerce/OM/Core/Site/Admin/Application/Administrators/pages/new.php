@@ -30,7 +30,7 @@
     <p><label for="user_name"><?php echo OSCOM::getDef('field_username'); ?></label><?php echo HTML::inputField('user_name'); ?></p>
     <p><label for="user_password"><?php echo OSCOM::getDef('field_password'); ?></label><?php echo HTML::passwordField('user_password'); ?></p>
 
-    <p><select name="accessModules" id="modulesList"><option value="-1" disabled="disabled">-- Access Modules --</option><option value="0"><?php echo OSCOM::getDef('global_access'); ?></option></select></p>
+    <p><select name="accessModules" id="modulesList"><option value="-1" disabled="disabled" selected="selected"><?php echo OSCOM::getDef('access_modules'); ?></option><option value="0"><?php echo OSCOM::getDef('global_access'); ?></option></select></p>
 
     <ul id="accessToModules" class="modulesListing"></ul>
   </fieldset>
