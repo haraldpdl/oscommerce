@@ -26,6 +26,8 @@
 <div class="infoBox">
   <h3><?php echo HTML::icon('edit.png') . ' ' . $OSCOM_ObjectInfo->getProtected('title'); ?></h3>
 
+    <div class="servicesDescription"><?php echo '<b>' . OSCOM::getDef('description_of_service') . '</b><br /> ' . htmlspecialchars_decode($OSCOM_ObjectInfo->getProtected('description')); ?></div>
+            
   <form name="mEdit" class="dataForm" action="<?php echo OSCOM::getLink(null, null, 'Save&Process&code=' . $OSCOM_ObjectInfo->get('code')); ?>" method="post">
 
   <p><?php echo OSCOM::getDef('introduction_edit_service_module'); ?></p>

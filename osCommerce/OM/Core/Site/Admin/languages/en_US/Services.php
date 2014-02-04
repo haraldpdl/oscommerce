@@ -6,6 +6,7 @@
 app_title = Services
 
 heading_title = Services
+description_of_service = Description of this service module :
 
 table_heading_service_modules = Service Modules
 table_heading_action = Action
