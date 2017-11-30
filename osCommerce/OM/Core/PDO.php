@@ -2,15 +2,16 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2015 osCommerce; http://www.oscommerce.com
- * @license BSD; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core;
 
 use osCommerce\OM\Core\{
     HTML,
-    OSCOM
+    OSCOM,
+    Registry
 };
 
 class PDO
@@ -85,7 +86,7 @@ class PDO
         return $this->_instance->exec($statement);
     }
 
-    public function prepare($statement, $driver_options = []): \PDOStatement
+    public function prepare($statement, $driver_options = []): \osCommerce\OM\Core\PDOStatement
     {
         if (!isset($this->_instance)) {
             $this->connect();
@@ -99,7 +100,7 @@ class PDO
         return $PDOStatement;
     }
 
-    public function query($statement, ...$params): \PDOStatement
+    public function query($statement, ...$params): \osCommerce\OM\Core\PDOStatement
     {
         if (!isset($this->_instance)) {
             $this->connect();
@@ -113,7 +114,7 @@ class PDO
         return $PDOStatement;
     }
 
-    public function get($table, $fields, array $where = null, $order = null, $limit = null, array $options = null): \PDOStatement
+    public function get($table, $fields, array $where = null, $order = null, $limit = null, array $options = null): \osCommerce\OM\Core\PDOStatement
     {
         if (!is_array($table)) {
             $table = [ $table ];
@@ -175,7 +176,7 @@ class PDO
             }
         }
 
-        if (!isset($where)) {
+        if (!isset($where) && !isset($options['cache'])) {
             if (isset($order)) {
                 $statement .= ' order by ' . implode(', ', $order);
             }
@@ -197,7 +198,7 @@ class PDO
             foreach ($it_where as $key => $value) {
                 if (is_array($value)) {
                     if (isset($value['val'])) {
-                        $statement .= $key . ' ' . (isset($value['op']) ? $value['op'] : '=') . ' :cond_' . $counter;
+                        $statement .= $key . ' ' . (isset($value['op']) ? $value['op'] : '=') . ' ' . ($value['val'] == 'null' ? 'null' : ':cond_' . $counter);
                     }
 
                     if (isset($value['rel'])) {
@@ -250,7 +251,7 @@ class PDO
 
             foreach ($it_where as $value) {
                 if (is_array($value)) {
-                    if (isset($value['val'])) {
+                    if (isset($value['val']) && ($value['val'] != 'null')) {
                         $Q->bindValue(':cond_' . $counter, $value['val']);
                     }
                 } else {
@@ -261,6 +262,10 @@ class PDO
 
                 $counter++;
             }
+        }
+
+        if (isset($options['cache'])) {
+            $Q->setCache($options['cache']['key'], $options['cache']['expire'] ?? 0, $options['cache']['store_empty'] ?? false);
         }
 
         $Q->execute();
@@ -374,6 +379,56 @@ class PDO
         $Q->execute();
 
         return $Q->rowCount();
+    }
+
+    public function call(string $procedure, array $data = null, string $container = '_Global')
+    {
+        if (strpos($procedure, '\\') !== false) {
+            $override_ns = explode('\\', $procedure);
+
+            $bt_classes = [
+                'osCommerce\\OM\\Core\\' . implode('\\', array_slice($override_ns, 0, -1)) . '\\' . $container
+            ];
+
+            $procedure = end($override_ns);
+        } else {
+            $bt = debug_backtrace(0, 2);
+
+            $bt_classes = [
+                $bt[1]['class']
+            ];
+
+            $bt_classes = array_merge($bt_classes, class_parents($bt[1]['class']));
+        }
+
+        foreach ($bt_classes as $bt_class) {
+            $ns_class = explode('\\', $bt_class);
+
+            if (implode('\\', array_slice($ns_class, 0, 2)) == 'osCommerce\\OM') {
+                $sql_class = implode('\\', array_slice($ns_class, 0, -1)) . '\\SQL\\' . end($ns_class);
+
+                $driver = $this->getDriver();
+
+                if (!class_exists($sql_class . '\\' . $driver . '\\' . $procedure)) {
+                    if ($this->hasDriverParent() && class_exists($sql_class . '\\' . $this->getDriverParent() . '\\' . $procedure)) {
+                        $driver = $this->getDriverParent();
+                    } else {
+                        $driver = null;
+                    }
+                }
+
+                $class = $sql_class . '\\' . (isset($driver) ? $driver . '\\' : '') . $procedure;
+
+                if (class_exists($class)) {
+                    return call_user_func([
+                        $class,
+                        'execute'
+                    ], $data);
+                }
+            }
+        }
+
+        trigger_error('OSCOM\\PDO::call(): cannot call: ' . $bt_classes[0] . '::' . $procedure);
     }
 
     public function getBatchFrom(int $pageset, int $max_results): int

@@ -2,13 +2,13 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2015 osCommerce; http://www.oscommerce.com
- * @license BSD; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core\Hash;
 
-class Salt
+class Salt implements \osCommerce\OM\Core\HashInterface
 {
     public static function get(string $string): string
     {
@@ -39,6 +39,15 @@ class Salt
         }
 
         return (md5($stack[1] . $plain) == $stack[0]);
+    }
+
+    public static function canValidate(string $hash): bool
+    {
+        if (preg_match('/^[A-Z0-9]{32}\:[A-Z0-9]{2}$/i', $hash) === 1) {
+            return true;
+        }
+
+        return false;
     }
 
     public static function canUse(): bool

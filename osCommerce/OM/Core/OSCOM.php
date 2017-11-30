@@ -2,8 +2,8 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2014 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
   namespace osCommerce\OM\Core;
@@ -113,7 +113,7 @@
             $requested_application = HTML::sanitize(basename(key(array_slice($_GET, 1, 1, true))));
           }
 
-          if ( !empty($requested_application) && static::siteApplicationExists($requested_application) ) {
+          if ( preg_match('/^[A-Za-z0-9-_]+$/', $requested_application) && static::siteApplicationExists($requested_application) ) {
             $application = $requested_application;
           }
         }

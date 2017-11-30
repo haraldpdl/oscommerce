@@ -2,8 +2,8 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
   namespace osCommerce\OM\Core;
@@ -685,7 +685,7 @@
     public function parseContent($content, $whitelist = null) {
       static $loaded_tags = array();
 
-      $pattern = '/(?<!\{)\{([[:alpha:]][[:alnum:]]*)\b( .*?)?\}(.*?)?(?<!\{)\{\1\}/s';
+      $pattern = '/(?<![\$\{])\{([[:alpha:]][[:alnum:]]*)\b( .*?)?\}(.*?)?(?<![\$\{])\{\1\}/s';
 
       $le = function ($matches) use (&$le, &$pattern, $whitelist) {
         $string = $matches[3];

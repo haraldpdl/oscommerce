@@ -1,7 +1,7 @@
 <?php
 /**
  * osCommerce Online Merchant
- * 
+ *
  * @copyright Copyright (c) 2011 osCommerce; http://www.oscommerce.com
  * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
  */
@@ -17,7 +17,7 @@
       $this->_pdo = $pdo;
     }
 
-    public function execute($input_parameters = array()) {
+    public function execute($input_parameters = []): bool {
       $query_action = strtolower(substr($this->queryString, 0, strpos($this->queryString, ' ')));
 
       $db_table_prefix = OSCOM::getConfig('db_table_prefix');
