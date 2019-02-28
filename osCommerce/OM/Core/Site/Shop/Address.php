@@ -55,6 +55,12 @@
       if ( isset($address['zone_id']) && is_numeric($address['zone_id']) && ($address['zone_id'] > 0) ) {
         $state = self::getZoneName($address['zone_id']);
         $state_code = self::getZoneCode($address['zone_id']);
+      } elseif (empty($state) && !empty($state_code) && isset($address['country_id'])) {
+        $zone_id = self::getZoneId($address['country_id'], $state_code);
+
+        if ($zone_id !== -1) {
+          $state = self::getZoneName($zone_id);
+        }
       }
 
       $country = $address['country_title'] ?? null;
@@ -272,6 +278,16 @@
       $Qcountry->execute();
 
       return $Qcountry->value('address_format');
+    }
+
+    public static function getVatIdTitleAbr($id) {
+      $OSCOM_PDO = Registry::get('PDO');
+
+      $Qcountry = $OSCOM_PDO->prepare('select vatid_title_abr from :table_countries where countries_id = :countries_id');
+      $Qcountry->bindInt(':countries_id', $id);
+      $Qcountry->execute();
+
+      return $Qcountry->value('vatid_title_abr');
     }
 
     public static function getZoneId(int $country_id, string $zone_code) {
