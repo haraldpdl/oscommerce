@@ -2,40 +2,42 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  namespace osCommerce\OM\Core\PDO;
+namespace osCommerce\OM\Core\PDO;
 
-  class PostgreSQL extends \osCommerce\OM\Core\PDO {
-    public function __construct($server, $username, $password, $database, $port, $driver_options) {
-      $this->_server = $server;
-      $this->_username = (!empty($username) ? $username : null);
-      $this->_password = (!empty($password) ? $password : null);
-      $this->_database = $database;
-      $this->_port = $port;
-      $this->_driver_options = $driver_options;
+class PostgreSQL extends \osCommerce\OM\Core\PDO
+{
+    public function __construct(string $server, ?string $username, ?string $password, ?string $database, ?int $port, array $driver_options)
+    {
+        $this->server = $server;
+        $this->username = (!empty($username) ? $username : null);
+        $this->password = (!empty($password) ? $password : null);
+        $this->database = $database;
+        $this->port = $port;
+        $this->driver_options = $driver_options;
     }
 
-    public function connect() {
-      $dsn_array = array();
+    public function connect()
+    {
+        $dsn_array = [];
 
-      if ( empty($this->_database) ) {
-        $this->_database = 'postgres';
-      }
+        if (empty($this->database)) {
+            $this->database = 'postgres';
+        }
 
-      $dsn_array[] = 'dbname=' . $this->_database;
+        $dsn_array[] = 'dbname=' . $this->database;
 
-      $dsn_array[] = 'host=' . $this->_server;
+        $dsn_array[] = 'host=' . $this->server;
 
-      if ( !empty($this->_port) ) {
-        $dsn_array[] = 'port=' . $this->_port;
-      }
+        if (!empty($this->port)) {
+            $dsn_array[] = 'port=' . $this->port;
+        }
 
-      $dsn = 'pgsql:' . implode(';', $dsn_array);
+        $dsn = 'pgsql:' . implode(';', $dsn_array);
 
-      $this->_instance = new \PDO($dsn, $this->_username, $this->_password, $this->_driver_options);
+        $this->instance = new \PDO($dsn, $this->username, $this->password, $this->driver_options);
     }
-  }
-?>
+}

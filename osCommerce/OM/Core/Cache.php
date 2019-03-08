@@ -35,7 +35,7 @@
 /**
  * Write the data to a cache file
  *
- * @param string mixed $data The data to cache
+ * @param mixed $data The data to cache
  * @param string $key The key ID to save the cached data with
  * @access public
  */

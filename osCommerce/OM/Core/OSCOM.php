@@ -511,7 +511,7 @@
  *
  * @param string $name The name of the cookie
  * @param string $value The value of the cookie
- * @param int $expire Unix timestamp of when the cookie should expire
+ * @param int $expires Unix timestamp of when the cookie should expire
  * @param string $path The path on the server for which the cookie will be available on
  * @param string $domain The The domain that the cookie is available on
  * @param boolean $secure Indicates whether the cookie should only be sent over a secure HTTPS connection

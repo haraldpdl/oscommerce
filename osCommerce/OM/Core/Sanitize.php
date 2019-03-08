@@ -2,8 +2,8 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2017 osCommerce; https://www.oscommerce.com
- * @license BSD; https://www.oscommerce.com/license/bsd.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core;
@@ -16,10 +16,40 @@ class Sanitize
             return '';
         }
 
-        return trim(str_replace([
-            "\r\n",
-            "\n",
-            "\r"
-        ], '', $value));
+        return preg_replace([
+            '/\R/',
+            '/ {2,}/',
+            '/[<>]/'
+        ], [
+            '',
+            ' ',
+            '_'
+        ], trim($value));
+    }
+
+    public static function para(string $value = null): string
+    {
+        if (!isset($value)) {
+            return '';
+        }
+
+        return preg_replace([
+            '/\R{2,}/',
+            '/ {2,}/',
+            '/[<>]/'
+        ], [
+            "\n\n",
+            ' ',
+            '_'
+        ], trim($value));
+    }
+
+    public static function password(string $value = null): string
+    {
+        if (!isset($value)) {
+            return '';
+        }
+
+        return preg_replace('/\R/', '', $value);
     }
 }

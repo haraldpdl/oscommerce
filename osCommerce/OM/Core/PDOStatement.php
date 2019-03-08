@@ -2,8 +2,8 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2015 osCommerce; http://www.oscommerce.com
- * @license BSD; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core;
@@ -20,23 +20,32 @@ use osCommerce\OM\Core\{
 
 class PDOStatement extends \PDOStatement
 {
-    protected $_is_error = false;
-    protected $_binded_params = [];
-    protected $_cache_key;
-    protected $_cache_expire;
-    protected $_cache_data;
-    protected $_cache_read = false;
-    protected $_cache_empty = false;
-    protected $_query_call;
+    protected $is_error = false;
+    protected $binded_params = [];
+    protected $cache_key;
+    protected $cache_expire;
+    protected $cache_data;
+    protected $cache_read = false;
+    protected $cache_empty = false;
+    protected $query_call;
+    protected $result;
 
     public function bindValue($parameter, $value, $data_type = \PDO::PARAM_STR): bool
     {
-        $this->_binded_params[$parameter] = [
+        $this->binded_params[$parameter] = [
             'value' => $value,
             'data_type' => $data_type
         ];
 
-        return parent::bindValue($parameter, $value, $data_type);
+        try {
+            $result = parent::bindValue($parameter, $value, $data_type);
+        } catch (\PDOException $e) {
+            trigger_error($e->getMessage());
+
+            $result = false;
+        }
+
+        return $result;
     }
 
     public function bindInt(string $parameter, $value): bool
@@ -54,75 +63,87 @@ class PDOStatement extends \PDOStatement
         return $this->bindValue($parameter, null, \PDO::PARAM_NULL);
     }
 
-    public function execute($input_parameters = []): bool
+    public function execute($input_parameters = null): bool
     {
-        if (isset($this->_cache_key)) {
+        if (isset($this->cache_key)) {
             $OSCOM_Cache = Registry::get('Cache');
 
-            if ($OSCOM_Cache->read($this->_cache_key, $this->_cache_expire)) {
-                $this->_cache_data = $OSCOM_Cache->getCache();
+            if ($OSCOM_Cache->read($this->cache_key, $this->cache_expire)) {
+                $this->cache_data = $OSCOM_Cache->getCache();
 
-                $this->_cache_read = true;
+                $this->cache_read = true;
             }
         }
 
-        if ($this->_cache_read === false) {
-            if (empty($input_parameters)) {
-                $input_parameters = null;
-            }
+        if ($this->cache_read === false) {
+            try {
+                parent::execute($input_parameters);
+            } catch (\PDOException $e) {
+                $this->is_error = true;
 
-            $this->_is_error = !parent::execute($input_parameters);
-
-            if ($this->_is_error === true) {
+                trigger_error($e->getMessage());
                 trigger_error($this->queryString);
             }
         }
 
-        return !$this->_is_error;
+        return ($this->is_error === false);
     }
 
     public function fetch($fetch_style = \PDO::FETCH_ASSOC, $cursor_orientation = \PDO::FETCH_ORI_NEXT, $cursor_offset = 0)
     {
-        if ($this->_cache_read === true) {
-            $this->result = current($this->_cache_data);
+        if ($this->cache_read === true) {
+            if (is_array($this->cache_data)) {
+                $this->result = current($this->cache_data);
 
-            if ($this->result !== false) {
-                next($this->_cache_data);
+                if ($this->result !== false) {
+                    next($this->cache_data);
+                }
+            } else {
+                $this->result = $this->cache_data;
             }
         } else {
-            $this->result = parent::fetch($fetch_style, $cursor_orientation, $cursor_offset);
+            try {
+                $this->result = parent::fetch($fetch_style, $cursor_orientation, $cursor_offset);
 
-            if (isset($this->_cache_key) && ($this->result !== false)) {
-                if (!isset($this->_cache_data)) {
-                    $this->_cache_data = [];
+                if (isset($this->cache_key)) {
+                    if (!isset($this->cache_data)) {
+                        $this->cache_data = [];
+                    }
+
+                    $this->cache_data[] = $this->result;
                 }
+            } catch (\PDOException $e) {
+                trigger_error($e->getMessage());
 
-                $this->_cache_data[] = $this->result;
+                $this->result = false;
             }
         }
 
         return $this->result;
     }
 
-    public function fetchAll($fetch_style = \PDO::FETCH_ASSOC, $fetch_argument = null, $ctor_args = []): array
+    public function fetchAll($fetch_style = \PDO::FETCH_ASSOC, $fetch_argument = null, $ctor_args = null)
     {
-        if ($this->_cache_read === true) {
-            $this->result = $this->_cache_data;
+        if ($this->cache_read === true) {
+            $this->result = $this->cache_data;
         } else {
-// fetchAll() fails if second argument is passed in a fetch style that does not
-// use the optional argument
-            if (in_array($fetch_style, [
-                \PDO::FETCH_COLUMN,
-                \PDO::FETCH_CLASS,
-                \PDO::FETCH_FUNC
-            ])) {
-                $this->result = parent::fetchAll($fetch_style, $fetch_argument, $ctor_args);
-            } else {
-                $this->result = parent::fetchAll($fetch_style);
-            }
+            try {
+// PDOStatement::fetchAll() weird signature
+                if (isset($fetch_argument) && isset($ctor_args)) {
+                    $this->result = parent::fetchAll($fetch_style, $fetch_argument, $ctor_args);
+                } elseif (isset($fetch_argument)) {
+                    $this->result = parent::fetchAll($fetch_style, $fetch_argument);
+                } else {
+                    $this->result = parent::fetchAll($fetch_style);
+                }
 
-            if (isset($this->_cache_key) && ($this->result !== false)) {
-                $this->_cache_data = $this->result;
+                if (isset($this->cache_key)) {
+                    $this->cache_data = $this->result;
+                }
+            } catch (\PDOException $e) {
+                trigger_error($e->getMessage());
+
+                $this->result = false;
             }
         }
 
@@ -147,12 +168,12 @@ class PDOStatement extends \PDOStatement
 
     public function setCache(string $key, int $expire = 0, bool $cache_empty = false)
     {
-        $this->_cache_key = basename($key);
-        $this->_cache_expire = $expire;
-        $this->_cache_empty = $cache_empty;
+        $this->cache_key = basename($key);
+        $this->cache_expire = $expire;
+        $this->cache_empty = $cache_empty;
 
-        if ($this->_query_call != 'prepare') {
-            trigger_error('osCommerce\\OM\\Core\\PDOStatement::setCache(): Cannot set cache (\'' . $this->_cache_key . '\') on a non-prepare query. Please change the query to a prepare() query.');
+        if ($this->query_call != 'prepare') {
+            trigger_error('osCommerce\\OM\\Core\\PDOStatement::setCache(): Cannot set cache (\'' . $this->cache_key . '\') on a non-prepare query. Please change the query to a prepare() query.');
         }
     }
 
@@ -187,7 +208,7 @@ class PDOStatement extends \PDOStatement
             $this->fetch();
         }
 
-        return !is_null($this->result[$column]) && (strlen($this->result[$column]) > 0);
+        return !is_null($this->result[$column]) && (mb_strlen($this->result[$column]) > 0);
     }
 
     public function value(string $column): string
@@ -212,7 +233,7 @@ class PDOStatement extends \PDOStatement
 
     public function isError(): bool
     {
-        return $this->_is_error;
+        return $this->is_error;
     }
 
 /**
@@ -226,19 +247,19 @@ class PDOStatement extends \PDOStatement
 
     public function setQueryCall(string $type)
     {
-        $this->_query_call = $type;
+        $this->query_call = $type;
     }
 
     public function getQueryCall(): string
     {
-        return $this->_query_call;
+        return $this->query_call;
     }
 
     public function __destruct()
     {
-        if (($this->_cache_read === false) && isset($this->_cache_key) && is_array($this->_cache_data)) {
-            if ($this->_cache_empty || !empty($this->_cache_data)) {
-                Registry::get('Cache')->write($this->_cache_data, $this->_cache_key);
+        if (($this->is_error === false) && ($this->cache_read === false) && isset($this->cache_key)) {
+            if ($this->cache_empty || !empty($this->cache_data)) {
+                Registry::get('Cache')->write($this->cache_data, $this->cache_key);
             }
         }
     }

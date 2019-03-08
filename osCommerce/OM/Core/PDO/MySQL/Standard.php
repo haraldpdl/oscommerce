@@ -2,84 +2,96 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2014 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  namespace osCommerce\OM\Core\PDO\MySQL;
+namespace osCommerce\OM\Core\PDO\MySQL;
 
-  use osCommerce\OM\Core\OSCOM;
+use osCommerce\OM\Core\OSCOM;
 
-  class Standard extends \osCommerce\OM\Core\PDO {
-    protected $_has_native_fk = false;
-    protected $_fkeys = [];
+class Standard extends \osCommerce\OM\Core\PDO
+{
+    protected $has_native_fk = false;
+    protected $fkeys = [];
 
-    public function __construct($server, $username, $password, $database, $port, $driver_options) {
-      $this->_server = $server;
-      $this->_username = $username;
-      $this->_password = $password;
-      $this->_database = $database;
-      $this->_port = $port;
-      $this->_driver_options = $driver_options;
+    public function __construct(string $server, ?string $username, ?string $password, ?string $database, ?int $port, array $driver_options)
+    {
+        $this->server = $server;
+        $this->username = $username;
+        $this->password = $password;
+        $this->database = $database;
+        $this->port = $port;
+        $this->driver_options = $driver_options;
 
 // Override ATTR_STATEMENT_CLASS to automatically handle foreign key constraints
-      if ( $this->_has_native_fk === false ) {
-        $this->_driver_options[\PDO::ATTR_STATEMENT_CLASS] = array('osCommerce\\OM\\Core\\PDO\\MySQL\\Standard\\PDOStatement', array($this));
-      }
-    }
-
-    public function connect() {
-      $dsn_array = [];
-
-      if ( !empty($this->_database) ) {
-        $dsn_array[] = 'dbname=' . $this->_database;
-      }
-
-      if ( (strpos($this->_server, '/') !== false) || (strpos($this->_server, '\\') !== false) ) {
-        $dsn_array[] = 'unix_socket=' . $this->_server;
-      } else {
-        $dsn_array[] = 'host=' . $this->_server;
-
-        if ( !empty($this->_port) ) {
-          $dsn_array[] = 'port=' . $this->_port;
+        if ($this->has_native_fk === false) {
+            $this->driver_options[\PDO::ATTR_STATEMENT_CLASS] = [
+                'osCommerce\\OM\\Core\\PDO\\MySQL\\Standard\\PDOStatement',
+                [
+                    $this
+                ]
+            ];
         }
-      }
-
-      $dsn_array[] = 'charset=utf8';
-
-      $dsn = 'mysql:' . implode(';', $dsn_array);
-
-      $this->_instance = new \PDO($dsn, $this->_username, $this->_password, $this->_driver_options);
-
-      if ( (OSCOM::getSite() != 'Setup') && $this->_has_native_fk === false ) {
-        $this->setupForeignKeys();
-      }
     }
 
-    public function getForeignKeys($table = null) {
-      if ( isset($table) ) {
-        return $this->_fkeys[$table];
-      }
+    public function connect()
+    {
+        $dsn_array = [];
 
-      return $this->_fkeys;
+        if (!empty($this->database)) {
+            $dsn_array[] = 'dbname=' . $this->database;
+        }
+
+        if ((strpos($this->server, '/') !== false) || (strpos($this->server, '\\') !== false)) {
+            $dsn_array[] = 'unix_socket=' . $this->server;
+        } else {
+            $dsn_array[] = 'host=' . $this->server;
+
+            if (!empty($this->port)) {
+                $dsn_array[] = 'port=' . $this->port;
+            }
+        }
+
+        $dsn_array[] = 'charset=utf8';
+
+        $dsn = 'mysql:' . implode(';', $dsn_array);
+
+        $this->instance = new \PDO($dsn, $this->username, $this->password, $this->driver_options);
+
+        if ((OSCOM::getSite() != 'Setup') && $this->has_native_fk === false) {
+            $this->setupForeignKeys();
+        }
     }
 
-    public function setupForeignKeys() {
-      $Qfk = $this->query('select * from :table_fk_relationships');
-      $Qfk->setCache('fk_relationships');
-      $Qfk->execute();
+    public function getForeignKeys(string $table = null): array
+    {
+        if (isset($table)) {
+            return $this->fkeys[$table];
+        }
 
-      while ( $Qfk->fetch() ) {
-        $this->_fkeys[$Qfk->value('to_table')][] = array('from_table' => $Qfk->value('from_table'),
-                                                         'from_field' => $Qfk->value('from_field'),
-                                                         'to_field' => $Qfk->value('to_field'),
-                                                         'on_update' => $Qfk->value('on_update'),
-                                                         'on_delete' => $Qfk->value('on_delete'));
-      }
+        return $this->fkeys;
     }
 
-    public function hasForeignKey($table) {
-      return isset($this->_fkeys[$table]);
+    public function setupForeignKeys()
+    {
+        $Qfk = $this->query('select * from :table_fk_relationships');
+        $Qfk->setCache('fk_relationships');
+        $Qfk->execute();
+
+        while ($Qfk->fetch()) {
+            $this->fkeys[$Qfk->value('to_table')][] = [
+                'from_table' => $Qfk->value('from_table'),
+                'from_field' => $Qfk->value('from_field'),
+                'to_field' => $Qfk->value('to_field'),
+                'on_update' => $Qfk->value('on_update'),
+                'on_delete' => $Qfk->value('on_delete')
+            ];
+        }
     }
-  }
-?>
+
+    public function hasForeignKey(string $table): bool
+    {
+        return isset($this->fkeys[$table]);
+    }
+}

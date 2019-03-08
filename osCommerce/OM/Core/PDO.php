@@ -16,16 +16,16 @@ use osCommerce\OM\Core\{
 
 class PDO
 {
-    protected $_instance;
-    protected $_server;
-    protected $_username;
-    protected $_password;
-    protected $_database;
-    protected $_port;
-    protected $_table_prefix;
-    protected $_driver;
-    protected $_driver_options = [];
-    protected $_driver_parent;
+    protected $instance;
+    protected $server;
+    protected $username;
+    protected $password;
+    protected $database;
+    protected $port;
+    protected $table_prefix;
+    protected $driver;
+    protected $driver_options = [];
+    protected $driver_parent;
 
     public static function initialize(string $server = null, string $username = null, string $password = null, string $database = null, int $port = null, string $driver = null, array $driver_options = []): PDO
     {
@@ -54,7 +54,7 @@ class PDO
         }
 
         if (!isset($driver_options[\PDO::ATTR_ERRMODE])) {
-            $driver_options[\PDO::ATTR_ERRMODE] = \PDO::ERRMODE_WARNING;
+            $driver_options[\PDO::ATTR_ERRMODE] = \PDO::ERRMODE_EXCEPTION;
         }
 
         if (!isset($driver_options[\PDO::ATTR_DEFAULT_FETCH_MODE])) {
@@ -70,54 +70,76 @@ class PDO
         $class = 'osCommerce\\OM\\Core\\PDO\\' . $driver;
         $object = new $class($server, $username, $password, $database, $port, $driver_options);
 
-        $object->_driver = $driver;
+        $object->driver = $driver;
 
         return $object;
     }
 
-    public function exec($statement): int
+    public function exec(string $statement)
     {
-        if (!isset($this->_instance)) {
+        if (!isset($this->instance)) {
             $this->connect();
         }
 
-        $statement = $this->_autoPrefixTables($statement);
+        $statement = $this->autoPrefixTables($statement);
 
-        return $this->_instance->exec($statement);
+        try {
+            $result = $this->instance->exec($statement);
+        } catch (\PDOException $e) {
+            trigger_error($e->getMessage());
+
+            $result = false;
+        }
+
+        return $result;
     }
 
-    public function prepare($statement, $driver_options = []): \osCommerce\OM\Core\PDOStatement
+    public function prepare(string $statement, array $driver_options = [])
     {
-        if (!isset($this->_instance)) {
+        if (!isset($this->instance)) {
             $this->connect();
         }
 
-        $statement = $this->_autoPrefixTables($statement);
+        $statement = $this->autoPrefixTables($statement);
 
-        $PDOStatement = $this->_instance->prepare($statement, $driver_options);
-        $PDOStatement->setQueryCall('prepare');
+        try {
+            $result = $this->instance->prepare($statement, $driver_options);
+            $result->setQueryCall('prepare');
+        } catch (\PDOException $e) {
+            trigger_error($e->getMessage());
 
-        return $PDOStatement;
+            $result = false;
+        }
+
+        return $result;
     }
 
-    public function query($statement, ...$params): \osCommerce\OM\Core\PDOStatement
+    public function query(string $statement, ...$params)
     {
-        if (!isset($this->_instance)) {
+        if (!isset($this->instance)) {
             $this->connect();
         }
 
-        $statement = $this->_autoPrefixTables($statement);
+        $statement = $this->autoPrefixTables($statement);
 
-        $PDOStatement = $this->_instance->query($statement, ...$params);
-        $PDOStatement->setQueryCall('query');
+        try {
+            $result = $this->instance->query($statement, ...$params);
+            $result->setQueryCall('query');
+        } catch (\PDOException $e) {
+            trigger_error($e->getMessage());
 
-        return $PDOStatement;
+            $result = false;
+        }
+
+        return $result;
     }
 
-    public function get($table, $fields, array $where = null, $order = null, $limit = null, array $options = null): \osCommerce\OM\Core\PDOStatement
+    public function get($table, $fields, array $where = null, $order = null, $limit = null, array $options = null)
     {
         if (!is_array($table)) {
-            $table = [ $table ];
+            $table = [
+                $table
+            ];
         }
 
         if (!isset($options['prefix_tables']) || ($options['prefix_tables'] === true)) {
@@ -145,11 +167,15 @@ class PDO
         }
 
         if (!is_array($fields)) {
-            $fields = [ $fields ];
+            $fields = [
+                $fields
+            ];
         }
 
         if (isset($order) && !is_array($order)) {
-            $order = [ $order ];
+            $order = [
+                $order
+            ];
         }
 
         if (isset($limit)) {
@@ -273,7 +299,7 @@ class PDO
         return $Q;
     }
 
-    public function save(string $table, array $data, array $where_condition = null, array $options = null): int
+    public function save(string $table, array $data, array $where_condition = null, array $options = null)
     {
         if (!isset($options['prefix_tables']) || ($options['prefix_tables'] === true)) {
             if ((strlen($table) < 7) || (substr($table, 0, 7) != ':table_')) {
@@ -351,7 +377,7 @@ class PDO
             }
         }
 
-        return -1;
+        return false;
     }
 
     public function delete(string $table, array $where_condition, array $options = null): int
@@ -438,22 +464,22 @@ class PDO
 
     public function setTablePrefix(string $prefix)
     {
-        $this->_table_prefix = $prefix;
+        $this->table_prefix = $prefix;
     }
 
     public function getDriver(): string
     {
-        return $this->_driver;
+        return $this->driver;
     }
 
     public function getDriverParent(): string
     {
-        return $this->_driver_parent;
+        return $this->driver_parent;
     }
 
     public function hasDriverParent(): bool
     {
-        return isset($this->_driver_parent);
+        return isset($this->driver_parent);
     }
 
     public function importSQL(string $sql_file, string $table_prefix = null): bool
@@ -669,13 +695,13 @@ class PDO
         return $string;
     }
 
-    protected function _autoPrefixTables(string $statement): string
+    protected function autoPrefixTables(string $statement): string
     {
-        if (!isset($this->_table_prefix) && OSCOM::configExists('db_table_prefix')) {
-            $this->_table_prefix = OSCOM::getConfig('db_table_prefix');
+        if (!isset($this->table_prefix) && OSCOM::configExists('db_table_prefix')) {
+            $this->table_prefix = OSCOM::getConfig('db_table_prefix');
         }
 
-        $prefix = $this->_table_prefix ?? '';
+        $prefix = $this->table_prefix ?? '';
 
         $statement = str_replace(':table_', $prefix, $statement);
 
@@ -684,9 +710,9 @@ class PDO
 
     public function __call(string $name, array $arguments)
     {
-        if (isset($this->_instance)) {
+        if (isset($this->instance)) {
             return call_user_func_array([
-                $this->_instance,
+                $this->instance,
                 $name
             ], $arguments);
         }
