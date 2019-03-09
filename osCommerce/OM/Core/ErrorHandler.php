@@ -2,204 +2,288 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2014 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  namespace osCommerce\OM\Core;
+namespace osCommerce\OM\Core;
 
-  use osCommerce\OM\Core\DateTime;
-  use osCommerce\OM\Core\Language;
-  use osCommerce\OM\Core\OSCOM;
-  use osCommerce\OM\Core\PDO;
+use osCommerce\OM\Core\{
+    DateTime,
+    Language,
+    OSCOM,
+    PDO,
+    Registry
+};
 
-  class ErrorHandler {
-    static protected $_dbh;
+class ErrorHandler
+{
+    static protected $dbh;
 
-    public static function initialize() {
-      ini_set('display_errors', false);
-      ini_set('html_errors', false);
-      ini_set('ignore_repeated_errors', true);
+    public static function initialize()
+    {
+        ini_set('display_errors', false);
+        ini_set('html_errors', false);
+        ini_set('ignore_repeated_errors', true);
 
-      if ( is_writable(OSCOM::BASE_DIRECTORY . 'Work/Logs') ) {
-        ini_set('log_errors', true);
-        ini_set('error_log', OSCOM::BASE_DIRECTORY . 'Work/Logs/errors.txt');
-      }
-
-      if ( in_array('sqlite', PDO::getAvailableDrivers()) && is_writable(OSCOM::BASE_DIRECTORY . 'Work/Database/') ) {
-        set_error_handler(array('osCommerce\\OM\\Core\\ErrorHandler', 'execute'));
-
-        if ( file_exists(OSCOM::BASE_DIRECTORY . 'Work/Logs/errors.txt') ) {
-          static::import(OSCOM::BASE_DIRECTORY . 'Work/Logs/errors.txt');
+        if (is_writable(OSCOM::BASE_DIRECTORY . 'Work/Logs')) {
+            ini_set('log_errors', true);
+            ini_set('error_log', OSCOM::BASE_DIRECTORY . 'Work/Logs/errors.txt');
         }
-      }
+
+        if (in_array('sqlite', \PDO::getAvailableDrivers()) && is_writable(OSCOM::BASE_DIRECTORY . 'Work/Database/')) {
+            set_error_handler('osCommerce\\OM\\Core\\ErrorHandler::execute');
+
+            if (file_exists(OSCOM::BASE_DIRECTORY . 'Work/Logs/errors.txt')) {
+                static::import(OSCOM::BASE_DIRECTORY . 'Work/Logs/errors.txt');
+            }
+        }
+
+        register_shutdown_function('osCommerce\\OM\\Core\\ErrorHandler::onShutdown');
     }
 
-    public static function execute($errno, $errstr, $errfile, $errline) {
-      if ( !is_resource(static::$_dbh) && !static::connect() ) {
-        return false;
-      }
+    public static function execute(int $errno, string $errstr, string $errfile, int $errline)
+    {
+        if (!is_resource(static::$dbh) && !static::connect()) {
+            return false;
+        }
 
-      switch ($errno) {
-        case E_NOTICE:
-        case E_USER_NOTICE:
-          $errors = "Notice";
-          break;
-        case E_WARNING:
-        case E_USER_WARNING:
-          $errors = "Warning";
-          break;
-        case E_ERROR:
-        case E_USER_ERROR:
-          $errors = "Fatal Error";
-          break;
-        default:
-          $errors = "Unknown";
-          break;
-      }
+        switch ($errno) {
+            case E_NOTICE:
+            case E_USER_NOTICE:
+                $errors = 'Notice';
+                break;
 
-      $errstr = Language::toUTF8($errstr);
+            case E_WARNING:
+            case E_USER_WARNING:
+                $errors = 'Warning';
+                break;
 
-      $error_msg = sprintf('PHP %s:  %s in %s on line %d', $errors, $errstr, $errfile, $errline);
+            case E_ERROR:
+            case E_USER_ERROR:
+                $errors = 'Fatal Error';
+                break;
 
-      $Qinsert = static::$_dbh->prepare('insert into error_log (timestamp, message) values (:timestamp, :message)');
-      $Qinsert->bindInt(':timestamp', time());
-      $Qinsert->bindValue(':message', $error_msg);
-      $Qinsert->execute();
+            default:
+                $errors = 'Unknown';
+        }
+
+        $errstr = Language::toUTF8($errstr);
+
+        $error_msg = sprintf('PHP %s: %s in %s on line %d', $errors, $errstr, $errfile, $errline);
+
+        static::$dbh->save('error_log', [
+            'timestamp' => time(),
+            'message' => $error_msg
+        ]);
 
 // return true to stop further processing of internal php error handler
-      return true;
+        return true;
     }
 
-    public static function connect() {
-      $result = false;
+    public static function connect()
+    {
+        $result = false;
 
-      try {
-        static::$_dbh = PDO::initialize(OSCOM::BASE_DIRECTORY . 'Work/Database/errors.sqlite3', null, null, null, null, 'SQLite3');
-        static::$_dbh->exec('create table if not exists error_log ( timestamp int, message text );');
+        try {
+            static::$dbh = PDO::initialize(OSCOM::BASE_DIRECTORY . 'Work/Database/errors.sqlite3', null, null, null, null, 'SQLite3', [], ['prefix_tables' => false]);
+            static::$dbh->exec('create table if not exists error_log ( timestamp int, message text );');
 
-        $result = true;
-      } catch ( \Exception $e ) {
-        trigger_error($e->getMessage());
-      }
-
-      return $result;
-    }
-
-    public static function getAll($limit = null, $pageset = null) {
-      if ( !is_resource(static::$_dbh) && !static::connect() ) {
-        return array();
-      }
-
-      $query = 'select timestamp, message from error_log order by rowid desc';
-
-      if ( is_numeric($limit) ) {
-        $query .= ' limit ' . (int)$limit;
-
-        if ( is_numeric($pageset) ) {
-          $offset = max(($pageset * $limit) - $limit, 0);
-
-          $query .= ' offset ' . $offset;
+            $result = true;
+        } catch (\Exception $e) {
+            trigger_error($e->getMessage());
         }
-      }
 
-      return static::$_dbh->query($query)->fetchAll();
+        return $result;
     }
 
-    public static function getTotalEntries() {
-      if ( !is_resource(static::$_dbh) && !static::connect() ) {
-        return 0;
-      }
-
-      $result = self::$_dbh->query('select count(*) as total from error_log')->fetch();
-
-      return $result['total'];
-    }
-
-    public static function find($search, $limit = null, $pageset = null) {
-      if ( !is_resource(static::$_dbh) && !static::connect() ) {
-        return array();
-      }
-
-      $query = 'select timestamp, message from error_log where message like :message order by rowid desc';
-
-      if ( is_numeric($limit) ) {
-        $query .= ' limit ' . (int)$limit;
-
-        if ( is_numeric($pageset) ) {
-          $offset = max(($pageset * $limit) - $limit, 0);
-
-          $query .= ' offset ' . $offset;
+    public static function getAll(int $limit = null, int $pageset = null)
+    {
+        if (!is_resource(static::$dbh) && !static::connect()) {
+            return [];
         }
-      }
 
-      $Qlogs = static::$_dbh->prepare($query);
-      $Qlogs->bindValue(':message', '%' . $search . '%');
-      $Qlogs->execute();
+        $limit_q = null;
 
-      return $Qlogs->fetchAll();
-    }
+        if (isset($limit)) {
+            $limit_q = $limit;
 
-    public static function getTotalFindEntries($search) {
-      if ( !is_resource(static::$_dbh) && !static::connect() ) {
-        return 0;
-      }
+            if (isset($pageset)) {
+                $offset = max(($pageset * $limit) - $limit, 0);
 
-      $Qlogs = static::$_dbh->prepare('select count(*) as total from error_log where message like :message');
-      $Qlogs->bindValue(':message', '%' . $search . '%');
-      $Qlogs->execute();
-
-      $result = $Qlogs->fetch();
-
-      return $result['total'];
-    }
-
-    public static function import($filename) {
-      if ( !is_resource(static::$_dbh) && !static::connect() ) {
-        return false;
-      }
-
-      $error_log = file($filename);
-      unlink($filename);
-
-      $messages = [ ];
-
-      foreach ( $error_log as $error ) {
-        $error = Language::toUTF8(trim($error));
-
-        if ( preg_match('/^\[([0-9]{2}-[A-Za-z]{3}-[0-9]{4} [0-9]{2}:[0-5][0-9]:[0-5][0-9].*?)\] (.*)$/', $error, $matches) ) {
-          if ( strlen($matches[1]) == 20 ) {
-            $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s');
-          } else { // with timezone
-            $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s e');
-          }
-
-          $message = $matches[2];
-
-          $messages[] = [ 'timestamp' => $timestamp,
-                          'message' => $message ];
-        } elseif ( !empty($messages) ) {
-          $messages[(count($messages)-1)]['message'] .= "\n" . $error;
-        } else {
-          $messages[] = [ 'timestamp' => time(),
-                          'message' => $error ];
+                $limit_q = [$offset, $limit];
+            }
         }
-      }
 
-      foreach ( $messages as $error ) {
-        $Qinsert = static::$_dbh->prepare('insert into error_log (timestamp, message) values (:timestamp, :message)');
-        $Qinsert->bindInt(':timestamp', $error['timestamp']);
-        $Qinsert->bindValue(':message', $error['message']);
-        $Qinsert->execute();
-      }
+        return static::$dbh->get('error_log', [
+            'timestamp',
+            'message'
+        ], null, 'rowid desc', $limit_q)->fetchAll();
     }
 
-    public static function clear() {
-      if ( !is_resource(static::$_dbh) && !static::connect() ) {
-        return false;
-      }
+    public static function getTotalEntries(): int
+    {
+        if (!is_resource(static::$dbh) && !static::connect()) {
+            return 0;
+        }
 
-      static::$_dbh->exec('drop table if exists error_log');
+        $result = self::$dbh->get('error_log', 'count(*) as total')->fetch();
+
+        return $result['total'] ?? 0;
     }
-  }
-?>
+
+    public static function find(string $search, int $limit = null, int $pageset = null)
+    {
+        if (!is_resource(static::$dbh) && !static::connect()) {
+            return [];
+        }
+
+        $limit_q = null;
+
+        if (isset($limit)) {
+            $limit_q = $limit;
+
+            if (isset($pageset)) {
+                $offset = max(($pageset * $limit) - $limit, 0);
+
+                $limit_q = [$offset, $limit];
+            }
+        }
+
+        return static::$dbh->get('error_log', [
+            'timestamp',
+            'message'
+        ], [
+            'message' => [
+                'op' => 'like',
+                'val' => '%' . $search . '%'
+            ]
+        ], 'rowid desc', $limit_q)->fetchAll();
+    }
+
+    public static function getTotalFindEntries(string $search): int
+    {
+        if (!is_resource(static::$dbh) && !static::connect()) {
+            return 0;
+        }
+
+        $result = self::$dbh->get('error_log', 'count(*) as total', [
+            'message' => [
+                'op' => 'like',
+                'val' => '%' . $search . '%'
+            ]
+        ])->fetch();
+
+        return $result['total'] ?? 0;
+    }
+
+    public static function import(string $filename)
+    {
+        if (!is_resource(static::$dbh) && !static::connect()) {
+            return false;
+        }
+
+        $error_log = file($filename);
+        unlink($filename);
+
+        $messages = [];
+
+        foreach ($error_log as $error) {
+            $error = Language::toUTF8(trim($error));
+
+            if (preg_match('/^\[([0-9]{2}-[A-Za-z]{3}-[0-9]{4} [0-9]{2}:[0-5][0-9]:[0-5][0-9].*?)\] (.*)$/', $error, $matches)) {
+                if (mb_strlen($matches[1]) == 20) {
+                    $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s');
+                } else { // with timezone
+                    $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s e');
+                }
+
+                $message = $matches[2];
+
+                $messages[] = [
+                    'timestamp' => $timestamp,
+                    'message' => $message
+                ];
+            } elseif (!empty($messages)) {
+                $messages[(count($messages)-1)]['message'] .= "\n" . $error;
+            } else {
+                $messages[] = [
+                    'timestamp' => time(),
+                    'message' => $error
+                ];
+            }
+        }
+
+        foreach ($messages as $error) {
+            static::$dbh->save('error_log', [
+                'timestamp' => $error['timestamp'],
+                'message' => $error['message']
+            ]);
+        }
+    }
+
+    public static function clear()
+    {
+        if (!is_resource(static::$dbh) && !static::connect()) {
+            return false;
+        }
+
+        return static::$dbh->exec('drop table if exists error_log');
+    }
+
+    public static function onShutdown()
+    {
+        if (error_get_last() !== null) {
+            if (php_sapi_name() === 'cli') {
+                return true;
+            }
+
+            try {
+                if (!OSCOM::isRPC()) {
+                    $page = null;
+
+                    if (Registry::exists('Language') && Registry::exists('Template')) {
+                        $OSCOM_Template = Registry::get('Template');
+
+                        if (!$OSCOM_Template->valueExists('html_base_href')) {
+                            $OSCOM_Template->setValue('html_base_href', $OSCOM_Template->getBaseUrl());
+                        }
+
+                        $file = OSCOM::BASE_DIRECTORY . 'Custom/Site/' . OSCOM::getSite() . '/Template/' . $OSCOM_Template->getCode() . '/ErrorHandler/pages/general.html';
+
+                        if (!file_exists($file)) {
+                            $file = OSCOM::BASE_DIRECTORY . 'Core/Site/' . OSCOM::getSite() . '/Template/' . $OSCOM_Template->getCode() . '/ErrorHandler/pages/general.html';
+                        }
+
+                        if (file_exists($file)) {
+                            $page = $OSCOM_Template->getContent($file);
+                        }
+                    }
+
+                    if (is_null($page)) {
+                        $page = file_get_contents(__DIR__ . '/ErrorHandler/pages/general.html');
+
+                        if (!is_null(OSCOM::getSite()) && !is_null(OSCOM::getSiteApplication())) {
+                            $url = OSCOM::getLink();
+
+                            $page = str_replace('{link}{link}', $url, $page);
+                        }
+                    }
+
+                    if (!is_null($page)) {
+                        trigger_error('$_GET = ' . json_encode($_GET));
+
+                        if (!headers_sent()) {
+                            http_response_code(503);
+                        }
+
+                        echo $page;
+
+                        exit;
+                    }
+                }
+            } catch (\Exception $e) {
+            }
+        }
+    }
+}
