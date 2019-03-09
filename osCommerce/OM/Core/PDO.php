@@ -26,8 +26,11 @@ class PDO
     protected $driver;
     protected $driver_options = [];
     protected $driver_parent;
+    protected $options = [
+        'prefix_tables' => true
+    ];
 
-    public static function initialize(string $server = null, string $username = null, string $password = null, string $database = null, int $port = null, string $driver = null, array $driver_options = []): PDO
+    public static function initialize(string $server = null, string $username = null, string $password = null, string $database = null, int $port = null, string $driver = null, array $driver_options = [], array $options = []): PDO
     {
         if (!isset($server)) {
             $server = OSCOM::getConfig('db_server');
@@ -71,6 +74,7 @@ class PDO
         $object = new $class($server, $username, $password, $database, $port, $driver_options);
 
         $object->driver = $driver;
+        $object->options = array_merge($object->options, $options);
 
         return $object;
     }
@@ -81,7 +85,9 @@ class PDO
             $this->connect();
         }
 
-        $statement = $this->autoPrefixTables($statement);
+        if ($this->options['prefix_tables'] === true) {
+            $statement = $this->autoPrefixTables($statement);
+        }
 
         try {
             $result = $this->instance->exec($statement);
@@ -100,7 +106,9 @@ class PDO
             $this->connect();
         }
 
-        $statement = $this->autoPrefixTables($statement);
+        if ($this->options['prefix_tables'] === true) {
+            $statement = $this->autoPrefixTables($statement);
+        }
 
         try {
             $result = $this->instance->prepare($statement, $driver_options);
@@ -120,7 +128,9 @@ class PDO
             $this->connect();
         }
 
-        $statement = $this->autoPrefixTables($statement);
+        if ($this->options['prefix_tables'] === true) {
+            $statement = $this->autoPrefixTables($statement);
+        }
 
         try {
             $result = $this->instance->query($statement, ...$params);
@@ -142,20 +152,20 @@ class PDO
             ];
         }
 
-        if (!isset($options['prefix_tables']) || ($options['prefix_tables'] === true)) {
+        if ((!isset($options['prefix_tables']) && ($this->options['prefix_tables'] === true)) || (isset($options['prefix_tables']) && ($options['prefix_tables'] === true))) {
             $new_table = [];
 
             array_walk($table, function($v, $k) use (&$new_table) { // array_walk cannot alter keys
                 if (is_array($v)) {
-                    if ((strlen($k) < 7) || (substr($k, 0, 7) != ':table_')) {
+                    if ((mb_strlen($k) < 7) || (mb_substr($k, 0, 7) != ':table_')) {
                         $k = ':table_' . $k;
                     }
 
-                    if ((strlen($v['rel']) < 7) || (substr($v['rel'], 0, 7) != ':table_')) {
+                    if ((mb_strlen($v['rel']) < 7) || (mb_substr($v['rel'], 0, 7) != ':table_')) {
                         $v['rel'] = ':table_' . $v['rel'];
                     }
                 } else {
-                    if ((strlen($v) < 7) || (substr($v, 0, 7) != ':table_')) {
+                    if ((mb_strlen($v) < 7) || (mb_substr($v, 0, 7) != ':table_')) {
                         $v = ':table_' . $v;
                     }
                 }
@@ -301,8 +311,8 @@ class PDO
 
     public function save(string $table, array $data, array $where_condition = null, array $options = null)
     {
-        if (!isset($options['prefix_tables']) || ($options['prefix_tables'] === true)) {
-            if ((strlen($table) < 7) || (substr($table, 0, 7) != ':table_')) {
+        if ((!isset($options['prefix_tables']) && ($this->options['prefix_tables'] === true)) || (isset($options['prefix_tables']) && ($options['prefix_tables'] === true))) {
+            if ((mb_strlen($table) < 7) || (mb_substr($table, 0, 7) != ':table_')) {
                 $table = ':table_' . $table;
             }
         }
@@ -318,13 +328,13 @@ class PDO
                 }
             }
 
-            $statement = substr($statement, 0, -2) . ' where ';
+            $statement = mb_substr($statement, 0, -2) . ' where ';
 
             foreach (array_keys($where_condition) as $c) {
                 $statement .= $c . ' = :cond_' . $c . ' and ';
             }
 
-            $statement = substr($statement, 0, -5);
+            $statement = mb_substr($statement, 0, -5);
 
             $Q = $this->prepare($statement);
 
@@ -358,7 +368,7 @@ class PDO
                 }
             }
 
-            $statement = substr($statement, 0, -2) . ')';
+            $statement = mb_substr($statement, 0, -2) . ')';
 
             if ($is_prepared === true) {
                 $Q = $this->prepare($statement);
@@ -382,8 +392,8 @@ class PDO
 
     public function delete(string $table, array $where_condition, array $options = null): int
     {
-        if (!isset($options['prefix_tables']) || ($options['prefix_tables'] === true)) {
-            if ((strlen($table) < 7) || (substr($table, 0, 7) != ':table_')) {
+        if ((!isset($options['prefix_tables']) && ($this->options['prefix_tables'] === true)) || (isset($options['prefix_tables']) && ($options['prefix_tables'] === true))) {
+            if ((mb_strlen($table) < 7) || (mb_substr($table, 0, 7) != ':table_')) {
                 $table = ':table_' . $table;
             }
         }
@@ -394,7 +404,7 @@ class PDO
             $statement .= $c . ' = :cond_' . $c . ' and ';
         }
 
-        $statement = substr($statement, 0, -5);
+        $statement = mb_substr($statement, 0, -5);
 
         $Q = $this->prepare($statement);
 
@@ -409,7 +419,7 @@ class PDO
 
     public function call(string $procedure, array $data = null, string $container = '_Global')
     {
-        if (strpos($procedure, '\\') !== false) {
+        if (mb_strpos($procedure, '\\') !== false) {
             $override_ns = explode('\\', $procedure);
 
             $bt_classes = [
@@ -495,15 +505,15 @@ class PDO
         set_time_limit(0);
 
         $sql_queries = [];
-        $sql_length = strlen($import_queries);
-        $pos = strpos($import_queries, ';');
+        $sql_length = mb_strlen($import_queries);
+        $pos = mb_strpos($import_queries, ';');
 
         for ($i = $pos; $i < $sql_length; $i++) {
 // remove comments
-            if (($import_queries[0] == '#') || (substr($import_queries, 0, 2) == '--')) {
-                $import_queries = ltrim(substr($import_queries, strpos($import_queries, "\n")));
-                $sql_length = strlen($import_queries);
-                $i = strpos($import_queries, ';') - 1;
+            if (($import_queries[0] == '#') || (mb_substr($import_queries, 0, 2) == '--')) {
+                $import_queries = ltrim(mb_substr($import_queries, mb_strpos($import_queries, "\n")));
+                $sql_length = mb_strlen($import_queries);
+                $i = mb_strpos($import_queries, ';') - 1;
                 continue;
             }
 
@@ -512,9 +522,9 @@ class PDO
 
                 for ($j = ($i + 2); $j < $sql_length; $j++) {
                     if (!empty($import_queries[$j])) {
-                        $next = substr($import_queries, $j, 6);
+                        $next = mb_substr($import_queries, $j, 6);
 
-                        if (($next[0] == '#') || (substr($next, 0, 2) == '--')) {
+                        if (($next[0] == '#') || (mb_substr($next, 0, 2) == '--')) {
 // find out where the break position is so we can remove this line (#comment line)
                             for ($k = $j; $k < $sql_length; $k++) {
                                 if ($import_queries[$k] == "\n") {
@@ -522,14 +532,14 @@ class PDO
                                 }
                             }
 
-                            $query = substr($import_queries, 0, $i + 1);
+                            $query = mb_substr($import_queries, 0, $i + 1);
 
-                            $import_queries = substr($import_queries, $k);
+                            $import_queries = mb_substr($import_queries, $k);
 
 // join the query before the comment appeared, with the rest of the dump
                             $import_queries = $query . $import_queries;
-                            $sql_length = strlen($import_queries);
-                            $i = strpos($import_queries, ';') - 1;
+                            $sql_length = mb_strlen($import_queries);
+                            $i = mb_strpos($import_queries, ';') - 1;
                             continue 2;
                         }
 
@@ -541,28 +551,28 @@ class PDO
                     $next = 'insert';
                 }
 
-                if ((strtoupper($next) == 'DROP T') || (strtoupper($next) == 'CREATE') || (strtoupper($next) == 'INSERT') || (strtoupper($next) == 'ALTER ') || (strtoupper($next) == 'SET FO')) {
+                if ((mb_strtoupper($next) == 'DROP T') || (mb_strtoupper($next) == 'CREATE') || (mb_strtoupper($next) == 'INSERT') || (mb_strtoupper($next) == 'ALTER ') || (mb_strtoupper($next) == 'SET FO')) {
                     $next = '';
 
-                    $sql_query = substr($import_queries, 0, $i);
+                    $sql_query = mb_substr($import_queries, 0, $i);
 
                     if (isset($table_prefix)) {
-                        if (strtoupper(substr($sql_query, 0, 25)) == 'DROP TABLE IF EXISTS OSC_') {
-                            $sql_query = 'DROP TABLE IF EXISTS ' . $table_prefix . substr($sql_query, 25);
-                        } elseif (strtoupper(substr($sql_query, 0, 17)) == 'CREATE TABLE OSC_') {
-                            $sql_query = 'CREATE TABLE ' . $table_prefix . substr($sql_query, 17);
-                        } elseif (strtoupper(substr($sql_query, 0, 16)) == 'INSERT INTO OSC_') {
-                            $sql_query = 'INSERT INTO ' . $table_prefix . substr($sql_query, 16);
-                        } elseif (strtoupper(substr($sql_query, 0, 12)) == 'CREATE INDEX') {
-                            $sql_query = substr($sql_query, 0, stripos($sql_query, ' on osc_')) . ' on ' . $table_prefix . substr($sql_query, stripos($sql_query, ' on osc_') + 8);
+                        if (mb_strtoupper(mb_substr($sql_query, 0, 25)) == 'DROP TABLE IF EXISTS OSC_') {
+                            $sql_query = 'DROP TABLE IF EXISTS ' . $table_prefix . mb_substr($sql_query, 25);
+                        } elseif (mb_strtoupper(mb_substr($sql_query, 0, 17)) == 'CREATE TABLE OSC_') {
+                            $sql_query = 'CREATE TABLE ' . $table_prefix . mb_substr($sql_query, 17);
+                        } elseif (mb_strtoupper(mb_substr($sql_query, 0, 16)) == 'INSERT INTO OSC_') {
+                            $sql_query = 'INSERT INTO ' . $table_prefix . mb_substr($sql_query, 16);
+                        } elseif (mb_strtoupper(mb_substr($sql_query, 0, 12)) == 'CREATE INDEX') {
+                            $sql_query = mb_substr($sql_query, 0, mb_stripos($sql_query, ' on osc_')) . ' on ' . $table_prefix . mb_substr($sql_query, mb_stripos($sql_query, ' on osc_') + 8);
                         }
                     }
 
                     $sql_queries[] = trim($sql_query);
 
-                    $import_queries = ltrim(substr($import_queries, $i + 1));
-                    $sql_length = strlen($import_queries);
-                    $i = strpos($import_queries, ';') - 1;
+                    $import_queries = ltrim(mb_substr($import_queries, $i + 1));
+                    $sql_length = mb_strlen($import_queries);
+                    $i = mb_strpos($import_queries, ';') - 1;
                 }
             }
         }

@@ -22,13 +22,13 @@ class PDOStatement extends \osCommerce\OM\Core\PDOStatement
     public function execute($input_parameters = null): bool
     {
         try {
-            $query_action = strtolower(substr($this->queryString, 0, strpos($this->queryString, ' ')));
+            $query_action = mb_strtolower(mb_substr($this->queryString, 0, mb_strpos($this->queryString, ' ')));
 
             $db_table_prefix = OSCOM::getConfig('db_table_prefix');
 
             if ($query_action == 'delete') {
                 $query_data = explode(' ', $this->queryString, 4);
-                $query_table = substr($query_data[2], strlen($db_table_prefix));
+                $query_table = mb_substr($query_data[2], mb_strlen($db_table_prefix));
 
                 if ($this->pdo->hasForeignKey($query_table)) {
                     // check for RESTRICT constraints first
@@ -79,7 +79,7 @@ class PDOStatement extends \osCommerce\OM\Core\PDOStatement
                 }
             } elseif ($query_action == 'update') {
                 $query_data = explode(' ', $this->queryString, 3);
-                $query_table = substr($query_data[1], strlen($db_table_prefix));
+                $query_table = mb_substr($query_data[1], mb_strlen($db_table_prefix));
 
                 if ($this->pdo->hasForeignKey($query_table)) {
                     // check for RESTRICT constraints first
@@ -108,11 +108,11 @@ class PDOStatement extends \osCommerce\OM\Core\PDOStatement
 
                     foreach ($this->pdo->getForeignKeys($query_table) as $fk) {
                         // check to see if foreign key column value is being changed
-                        if (strpos(substr($this->queryString, strpos($this->queryString, ' set ')+4, strpos($this->queryString, ' where ') - strpos($this->queryString, ' set ') - 4), ' ' . $fk['to_field'] . ' ') !== false) {
-                            $Qparent = $this->pdo->prepare('select * from ' . $query_data[1] . substr($this->queryString, strrpos($this->queryString, ' where ')));
+                        if (mb_strpos(mb_substr($this->queryString, mb_strpos($this->queryString, ' set ')+4, mb_strpos($this->queryString, ' where ') - mb_strpos($this->queryString, ' set ') - 4), ' ' . $fk['to_field'] . ' ') !== false) {
+                            $Qparent = $this->pdo->prepare('select * from ' . $query_data[1] . mb_substr($this->queryString, mb_strrpos($this->queryString, ' where ')));
 
                             foreach ($this->binded_params as $key => $value) {
-                                if (preg_match('/:\b' . substr($key, 1) . '\b/', $Qparent->queryString)) {
+                                if (preg_match('/:\b' . mb_substr($key, 1) . '\b/', $Qparent->queryString)) {
                                     $Qparent->bindValue($key, $value['value'], $value['data_type']);
                                 }
                             }

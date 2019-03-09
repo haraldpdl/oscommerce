@@ -2,8 +2,8 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2016 osCommerce; https://www.oscommerce.com
- * @license BSD; https://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core;
@@ -71,8 +71,8 @@ class ActionRecorder
         $user_agent = $action['user_agent'] ?? $_SERVER['HTTP_USER_AGENT'] ?? '';
         $user_agent = HTML::sanitize($user_agent);
 
-        if (strlen($user_agent) > 2048) {
-            $user_agent = substr($user_agent, 0, 2048);
+        if (mb_strlen($user_agent) > 2048) {
+            $user_agent = mb_substr($user_agent, 0, 2048);
         }
 
         $data['user_agent'] = $user_agent;

@@ -43,7 +43,7 @@ class Standard extends \osCommerce\OM\Core\PDO
             $dsn_array[] = 'dbname=' . $this->database;
         }
 
-        if ((strpos($this->server, '/') !== false) || (strpos($this->server, '\\') !== false)) {
+        if ((mb_strpos($this->server, '/') !== false) || (mb_strpos($this->server, '\\') !== false)) {
             $dsn_array[] = 'unix_socket=' . $this->server;
         } else {
             $dsn_array[] = 'host=' . $this->server;
