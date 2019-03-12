@@ -103,7 +103,7 @@
                              HTML::outputProtected($country),
                              "\n");
 
-      $formated = preg_replace($find_array, $replace_array, $address_format);
+      $formated = trim(preg_replace($find_array, $replace_array, $address_format));
 
       if ( !empty($new_line) ) {
         $formated = str_replace("\n", $new_line, $formated);
