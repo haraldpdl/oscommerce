@@ -234,7 +234,7 @@ class PDO
             foreach ($it_where as $key => $value) {
                 if (is_array($value)) {
                     if (isset($value['val'])) {
-                        $statement .= $key . ' ' . (isset($value['op']) ? $value['op'] : '=') . ' ' . ($value['val'] == 'null' ? 'null' : ':cond_' . $counter);
+                        $statement .= $key . ' ' . (isset($value['op']) ? $value['op'] : '=') . ' ' . ($value['val'] === 'null' ? 'null' : ':cond_' . $counter);
                     }
 
                     if (isset($value['rel'])) {
@@ -257,7 +257,7 @@ class PDO
                         }
                     }
                 } else {
-                    if ($value == 'null') {
+                    if ($value === 'null') {
                         $statement .= $key . ' is null';
                     } else {
                         $statement .= $key . ' = :cond_' . $counter;
@@ -287,11 +287,11 @@ class PDO
 
             foreach ($it_where as $value) {
                 if (is_array($value)) {
-                    if (isset($value['val']) && ($value['val'] != 'null')) {
+                    if (isset($value['val']) && ($value['val'] !== 'null')) {
                         $Q->bindValue(':cond_' . $counter, $value['val']);
                     }
                 } else {
-                    if ($value != 'null') {
+                    if ($value !== 'null') {
                         $Q->bindValue(':cond_' . $counter, $value);
                     }
                 }
@@ -321,7 +321,7 @@ class PDO
             $statement = 'update ' . $table . ' set ';
 
             foreach ($data as $c => $v) {
-                if ($v == 'now()' || $v == 'null') {
+                if ($v == 'now()' || $v === 'null') {
                     $statement .= $c . ' = ' . $v . ', ';
                 } else {
                     $statement .= $c . ' = :new_' . $c . ', ';
@@ -339,7 +339,7 @@ class PDO
             $Q = $this->prepare($statement);
 
             foreach ($data as $c => $v) {
-                if ($v != 'now()' && $v != 'null') {
+                if ($v != 'now()' && $v !== 'null') {
                     $Q->bindValue(':new_' . $c, $v);
                 }
             }
@@ -357,7 +357,7 @@ class PDO
             $statement = 'insert into ' . $table . ' (' . implode(', ', array_keys($data)) . ') values (';
 
             foreach ($data as $c => $v) {
-                if ($v == 'now()' || $v == 'null' || is_null($v)) {
+                if ($v == 'now()' || $v === 'null' || is_null($v)) {
                     $statement .= ($v ?? 'null') . ', ';
                 } else {
                     if ($is_prepared === false) {
@@ -374,7 +374,7 @@ class PDO
                 $Q = $this->prepare($statement);
 
                 foreach ($data as $c => $v) {
-                    if ($v != 'now()' && $v != 'null' && !is_null($v)) {
+                    if ($v != 'now()' && $v !== 'null' && !is_null($v)) {
                         $Q->bindValue(':' . $c, $v);
                     }
                 }
