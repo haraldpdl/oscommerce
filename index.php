@@ -2,22 +2,23 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2014 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  use osCommerce\OM\Core\OSCOM;
+use osCommerce\OM\Core\{
+    OSCOM,
+    RunScript
+};
 
-  define('OSCOM_TIMESTAMP_START', microtime());
+define('OSCOM\\PUBLIC_BASE_DIRECTORY', __DIR__ . '/');
 
-  error_reporting(E_ALL | E_STRICT);
+require('osCommerce/OM/bootstrap.php');
 
-  define('OSCOM_PUBLIC_BASE_DIRECTORY', __DIR__ . '/');
+if ((PHP_SAPI === 'cli') || (isset($_GET['RunScript']) && !empty($_GET['RunScript']))) {
+    RunScript::execute();
+}
 
-  require('osCommerce/OM/Core/OSCOM.php');
-  spl_autoload_register('osCommerce\\OM\\Core\\OSCOM::autoload');
+OSCOM::initialize();
 
-  OSCOM::initialize();
-
-  echo $OSCOM_Template->getContent();
-?>
+echo $OSCOM_Template->getContent();

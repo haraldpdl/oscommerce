@@ -8,12 +8,11 @@
 
   namespace osCommerce\OM\Core;
 
-  define('OSCOM_BASE_DIRECTORY', realpath(__DIR__ . '/../') . DIRECTORY_SEPARATOR);
-
   class OSCOM {
-    const TIMESTAMP_START = OSCOM_TIMESTAMP_START;
-    const BASE_DIRECTORY = OSCOM_BASE_DIRECTORY;
-    const PUBLIC_DIRECTORY = OSCOM_PUBLIC_BASE_DIRECTORY;
+    const BASE_DIRECTORY = \OSCOM\BASE_DIRECTORY;
+    const PUBLIC_DIRECTORY = \OSCOM\PUBLIC_BASE_DIRECTORY;
+
+    const VALID_CLASS_NAME_REGEXP = '/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/'; // https://php.net/manual/en/language.oop5.basic.php
 
     protected static $_version;
     protected static $_request_type;
@@ -22,14 +21,8 @@
     protected static $_is_rpc = false;
     protected static $_config;
 
-    public static function initialize() {
-      static::loadConfig();
-
-      DateTime::setTimeZone();
-
-      ErrorHandler::initialize();
-
-      static::setSite();
+    public static function initialize(string $site = null) {
+      static::setSite($site);
 
       if ( !static::siteExists(static::getSite()) ) {
         trigger_error('Site \'' . static::getSite() . '\' does not exist', E_USER_ERROR);
@@ -42,7 +35,7 @@
     }
 
     public static function siteExists($site) {
-      return class_exists('osCommerce\\OM\\Core\\Site\\' . $site . '\\Controller');
+      return static::isValidClassName($site) && class_exists('osCommerce\\OM\\Core\\Site\\' . $site . '\\Controller');
     }
 
     public static function setSite($site = null) {
@@ -96,7 +89,7 @@
     }
 
     public static function siteApplicationExists($application) {
-      return class_exists('osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Application\\' . $application . '\\Controller');
+      return static::isValidClassName($application) && class_exists('osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Application\\' . $application . '\\Controller');
     }
 
     public static function setSiteApplication($application = null) {
@@ -591,54 +584,9 @@
       return $params;
     }
 
-    public static function autoload($class) {
-      $prefix = 'osCommerce\\OM\\';
-
-      $len = strlen($prefix);
-      if ( strncmp($prefix, $class, $len) !== 0 ) { // try and autoload external classes
-        $class_path = str_replace('\\', DIRECTORY_SEPARATOR, $class);
-
-        $file = OSCOM_BASE_DIRECTORY . 'External' . DIRECTORY_SEPARATOR . $class_path . '.php';
-
-        if ( is_file($file) ) {
-          require($file);
-
-          return true;
-        }
-
-        $site_dirs = [
-          'Core',
-          'Custom'
-        ];
-
-        foreach ( $site_dirs as $site_dir ) {
-          $DL = new DirectoryListing(OSCOM_BASE_DIRECTORY . $site_dir . DIRECTORY_SEPARATOR . 'Site');
-          $DL->setIncludeFiles(false);
-
-          foreach ( $DL->getFiles() as $f ) {
-            $file = $DL->getDirectory() . DIRECTORY_SEPARATOR . $f['name'] . DIRECTORY_SEPARATOR . 'External' . DIRECTORY_SEPARATOR . $class_path . '.php';
-
-            if ( is_file($file) ) {
-              require($file);
-
-              return true;
-            }
-          }
-        }
-
-        return false;
-      }
-
-      $class = substr($class, $len);
-
-      $file = OSCOM_BASE_DIRECTORY . str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php';
-      $custom = str_replace('osCommerce' . DIRECTORY_SEPARATOR . 'OM' . DIRECTORY_SEPARATOR . 'Core' . DIRECTORY_SEPARATOR, 'osCommerce' . DIRECTORY_SEPARATOR . 'OM' . DIRECTORY_SEPARATOR . 'Custom' . DIRECTORY_SEPARATOR, $file);
-
-      if ( is_file($custom) ) {
-        require($custom);
-      } else if ( is_file($file) ) {
-        require($file);
-      }
+    public static function isValidClassName(string $classname)
+    {
+        return preg_match(static::VALID_CLASS_NAME_REGEXP, $classname) === 1;
     }
   }
 ?>
