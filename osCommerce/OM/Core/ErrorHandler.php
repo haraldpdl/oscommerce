@@ -238,6 +238,10 @@ class ErrorHandler
                 return true;
             }
 
+            if (headers_sent()) {
+                return true;
+            }
+
             try {
                 if (!OSCOM::isRPC()) {
                     $page = null;
