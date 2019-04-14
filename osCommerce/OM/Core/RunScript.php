@@ -14,10 +14,15 @@ use osCommerce\OM\Core\{
 };
 
 class RunScript {
+    public static $linebreak;
     public static $php_binary;
+    public static $previous_error_handler;
 
     public static function execute()
     {
+        static::$linebreak = (PHP_SAPI === 'cli') ? PHP_EOL : '<br>';
+        static::$previous_error_handler = set_error_handler('osCommerce\\OM\\Core\\RunScript::errorHandler');
+
         $site = $app = $script = null;
 
         if (PHP_SAPI === 'cli') {
@@ -126,7 +131,33 @@ class RunScript {
         }
 
         trigger_error('[RunScript] ' . $message);
+    }
 
-        echo $message . ((PHP_SAPI === 'cli') ? "\n" : '<br>');
+    public static function errorHandler(int $errno, string $errstr, string $errfile, int $errline)
+    {
+        $error = 'Unknown';
+
+        switch ($errno) {
+            case E_NOTICE:
+            case E_USER_NOTICE:
+                $error = 'Notice';
+                break;
+
+            case E_WARNING:
+            case E_USER_WARNING:
+                $error = 'Warning';
+                break;
+
+            case E_ERROR:
+            case E_USER_ERROR:
+                $error = 'Fatal Error';
+                break;
+        }
+
+        echo sprintf('PHP %s: %s in %s on line %d', $error, $errstr, $errfile, $errline) . static::$linebreak;
+
+        if (static::$previous_error_handler !== null) {
+            call_user_func_array(static::$previous_error_handler, [$errno, $errstr, $errfile, $errline]);
+        }
     }
 }
