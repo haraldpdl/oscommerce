@@ -22,7 +22,7 @@ class Utf8mb4 implements \osCommerce\OM\Core\RunScriptInterface
     {
         static::$opts['server'] = RunScript::getOpt('server') ?? OSCOM::getConfig('db_server');
         static::$opts['database'] = RunScript::getOpt('database') ?? OSCOM::getConfig('db_database');
-        static::$opts['prefix'] = RunScript::getOpt('prefix') !== null ? RunScript::getOpt('prefix') : OSCOM::configExists('db_table_prefix') ? OSCOM::getConfig('db_table_prefix') : '';
+        static::$opts['prefix'] = RunScript::getOpt('prefix') !== null ? RunScript::getOpt('prefix') : (OSCOM::configExists('db_table_prefix') ? OSCOM::getConfig('db_table_prefix') : '');
 
         $username = RunScript::getOpt('username');
         $password = RunScript::getOpt('password');
