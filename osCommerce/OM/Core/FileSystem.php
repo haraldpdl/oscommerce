@@ -2,8 +2,8 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2017 osCommerce; https://www.oscommerce.com
- * @license BSD; https://www.oscommerce.com/license/bsd.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core;
@@ -81,5 +81,33 @@ class FileSystem
     public static function displayPath(string $pathname): string
     {
         return str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $pathname);
+    }
+
+    public static function copyFile(string $source, string $destination): bool
+    {
+        $target_dir = dirname($destination);
+
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0777, true);
+        }
+
+        return copy($source, $destination);
+    }
+
+    public static function moveFile(string $source, string $destination): bool
+    {
+        $target_dir = dirname($destination);
+
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0777, true);
+        }
+
+        if (copy($source, $destination)) {
+            unlink($source);
+
+            return true;
+        }
+
+        return false;
     }
 }
