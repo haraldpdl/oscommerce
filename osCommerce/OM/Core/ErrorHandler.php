@@ -72,10 +72,18 @@ class ErrorHandler
 
         $error_msg = sprintf('PHP %s: %s in %s on line %d', $errors, $errstr, $errfile, $errline);
 
-        static::$dbh->save('error_log', [
-            'timestamp' => time(),
-            'message' => $error_msg
-        ]);
+        try {
+            static::$dbh->beginTransaction();
+
+            static::$dbh->save('error_log', [
+                'timestamp' => time(),
+                'message' => $error_msg
+            ]);
+
+            static::$dbh->commit();
+        } catch (\Exception $e) {
+            static::$dbh->rollBack();
+        }
 
 // return true to stop further processing of internal php error handler
         return true;
