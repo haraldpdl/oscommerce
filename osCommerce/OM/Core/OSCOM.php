@@ -6,247 +6,278 @@
  * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  namespace osCommerce\OM\Core;
+namespace osCommerce\OM\Core;
 
-  class OSCOM {
+class OSCOM
+{
     const BASE_DIRECTORY = \OSCOM\BASE_DIRECTORY;
     const PUBLIC_DIRECTORY = \OSCOM\PUBLIC_BASE_DIRECTORY;
 
     const VALID_CLASS_NAME_REGEXP = '/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/'; // https://php.net/manual/en/language.oop5.basic.php
 
-    protected static $_version;
-    protected static $_request_type;
-    protected static $_site;
-    protected static $_application;
-    protected static $_is_rpc = false;
-    protected static $_config;
+    protected static $version;
+    protected static $request_type;
+    protected static $site;
+    protected static $application;
+    protected static $is_rpc = false;
+    protected static $config;
 
-    public static function initialize(string $site = null) {
-      static::setSite($site);
+    public static function initialize(string $site = null)
+    {
+        static::setSite($site);
 
-      if ( !static::siteExists(static::getSite()) ) {
-        trigger_error('Site \'' . static::getSite() . '\' does not exist', E_USER_ERROR);
-        exit();
-      }
-
-      static::setSiteApplication();
-
-      call_user_func(array('osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Controller', 'initialize'));
-    }
-
-    public static function siteExists($site) {
-      return static::isValidClassName($site) && class_exists('osCommerce\\OM\\Core\\Site\\' . $site . '\\Controller');
-    }
-
-    public static function setSite($site = null) {
-      if ( isset($site) ) {
-        if ( !static::siteExists($site) ) {
-          trigger_error('Site \'' . $site . '\' does not exist, using \'' . (static::$_site ?? static::getDefaultSite()) . '\'', E_USER_ERROR);
-
-          unset($site);
+        if (!static::siteExists(static::getSite())) {
+            trigger_error('Site \'' . static::getSite() . '\' does not exist', E_USER_ERROR);
+            exit;
         }
-      } else {
-        if ( !empty($_GET) ) {
-          $requested_site = HTML::sanitize(basename(key(array_slice($_GET, 0, 1, true))));
 
-          if ( preg_match('/^[A-Z][A-Za-z0-9-_]*$/', $requested_site) && static::siteExists($requested_site) ) {
-            $site = $requested_site;
-          }
-        }
-      }
+        static::checkOffline();
 
-      static::$_site = $site ?? static::$_site ?? static::getDefaultSite();
+        static::setSiteApplication();
+
+        call_user_func(['osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Controller', 'initialize']);
     }
 
-    public static function getSite() {
-      return static::$_site;
+    public static function siteExists(string $site): bool
+    {
+        return static::isValidClassName($site) && class_exists('osCommerce\\OM\\Core\\Site\\' . $site . '\\Controller');
     }
 
-    public static function getDefaultSite() {
-      $site = static::getConfig('default_site', 'OSCOM');
+    public static function setSite(string $site = null)
+    {
+        if (isset($site)) {
+            if (!static::siteExists($site)) {
+                trigger_error('Site \'' . $site . '\' does not exist, using \'' . (static::$site ?? static::getDefaultSite()) . '\'', E_USER_ERROR);
 
-      if (isset($_SERVER['SERVER_NAME'])) {
-        $server = HTML::sanitize($_SERVER['SERVER_NAME']);
-
-        $sites = array();
-
-        foreach ( static::$_config as $group => $key ) {
-          if ( isset($key['http_server']) || isset($key['https_server']) ) {
-            if ( (isset($key['http_server']) && ('http://' . $server == $key['http_server'])) || (isset($key['https_server']) && ('https://' . $server == $key['https_server'])) ) {
-              $sites[] = $group;
+                unset($site);
             }
-          }
+        } else {
+            if (!empty($_GET)) {
+                $requested_site = HTML::sanitize(basename(key(array_slice($_GET, 0, 1, true))));
+
+                if (preg_match('/^[A-Z][A-Za-z0-9-_]*$/', $requested_site) && static::siteExists($requested_site)) {
+                    $site = $requested_site;
+                }
+            }
         }
 
-        if ( count($sites) > 0 ) {
-          if ( !in_array($site, $sites) ) {
-            $site = $sites[0];
-          }
-        }
-      }
-
-      return $site;
+        static::$site = $site ?? static::$site ?? static::getDefaultSite();
     }
 
-    public static function siteApplicationExists($application) {
-      return static::isValidClassName($application) && class_exists('osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Application\\' . $application . '\\Controller');
+    public static function getSite(): ?string
+    {
+        return static::$site;
     }
 
-    public static function setSiteApplication($application = null) {
-      if ( isset($application) ) {
-        if ( !static::siteApplicationExists($application) ) {
-          trigger_error('Application \'' . $application . '\' does not exist for Site \'' . static::getSite() . '\', using default \'' . static::getDefaultSiteApplication() . '\'', E_USER_ERROR);
-          $application = null;
-        }
-      } else {
-        if ( !empty($_GET) ) {
-          $requested_application = HTML::sanitize(basename(key(array_slice($_GET, 0, 1, true))));
+    public static function getDefaultSite(): string
+    {
+        $site = static::getConfig('default_site', 'OSCOM');
 
-          if ( $requested_application == static::getSite() ) {
-            $requested_application = HTML::sanitize(basename(key(array_slice($_GET, 1, 1, true))));
-          }
+        if (isset($_SERVER['SERVER_NAME'])) {
+            $server = HTML::sanitize($_SERVER['SERVER_NAME']);
 
-          if ( preg_match('/^[A-Za-z0-9-_]+$/', $requested_application) && static::siteApplicationExists($requested_application) ) {
-            $application = $requested_application;
-          }
-        }
-      }
+            $sites = [];
 
-      if ( empty($application) ) {
-        $application = static::getDefaultSiteApplication();
-      }
-
-      static::$_application = $application;
-    }
-
-    public static function getSiteApplication() {
-      return static::$_application;
-    }
-
-    public static function getDefaultSiteApplication() {
-      return call_user_func(array('osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Controller', 'getDefaultApplication'));
-    }
-
-    public static function setIsRPC() {
-      static::$_is_rpc = true;
-    }
-
-    public static function isRPC() {
-      return static::$_is_rpc;
-    }
-
-    public static function loadConfig() {
-      $ini = parse_ini_file(static::BASE_DIRECTORY . 'Config/settings.ini', true);
-
-      if ( file_exists(static::BASE_DIRECTORY . 'Config/local_settings.ini') ) {
-        $local = parse_ini_file(static::BASE_DIRECTORY . 'Config/local_settings.ini', true);
-
-        $ini = array_merge($ini, $local);
-      }
-
-      $server = isset($_SERVER['SERVER_NAME']) ? HTML::sanitize($_SERVER['SERVER_NAME']) : null;
-
-      foreach ( $ini as $group => $key ) {
-        if (!isset($key['http_server']) && isset($key['urls'])) {
-          $urls = [];
-
-          foreach ($key['urls'] as $k => $v) {
-            list($alias, $param) = explode('.', $k, 2);
-
-            $urls[$alias][$param] = $v;
-          }
-
-          if (isset($urls['default'])) {
-            $url = $urls['default'];
-
-            foreach ($urls as $k => $v) {
-              if (((static::getRequestType() === 'NONSSL') && ('http://' . $server == $v['http_server'])) || (isset($v['enable_ssl']) && ($v['enable_ssl'] === 'true') && isset($v['https_server']) && ('https://' . $server == $v['https_server']))) {
-                $url = $urls[$k];
-                $url['urls_key'] = $k;
-                break;
-              }
+            foreach (static::$config as $group => $key) {
+                if (isset($key['http_server']) || isset($key['https_server'])) {
+                    if ((isset($key['http_server']) && ('http://' . $server == $key['http_server'])) || (isset($key['https_server']) && ('https://' . $server == $key['https_server']))) {
+                        $sites[] = $group;
+                    }
+                }
             }
 
-            $ini[$group] = array_merge($ini[$group], $url);
-          }
+            if (count($sites) > 0) {
+                if (!in_array($site, $sites)) {
+                    $site = $sites[0];
+                }
+            }
         }
-      }
 
-      static::$_config = $ini;
+        return $site;
     }
 
-    public static function getConfig($key, $group = null) {
-      if ( !isset($group) ) {
-        $group = static::getSite();
-      }
-
-      return static::$_config[$group][$key];
+    public static function siteApplicationExists(string $application): bool
+    {
+        return static::isValidClassName($application) && class_exists('osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Application\\' . $application . '\\Controller');
     }
 
-    public static function configExists($key, $group = null) {
-      if ( !isset($group) ) {
-        $group = static::getSite();
-      }
-
-      return isset(static::$_config[$group][$key]);
-    }
-
-    public static function setConfig($key, $value, $group = null) {
-      if ( !isset($group) ) {
-        $group = static::getSite();
-      }
-
-      static::$_config[$group][$key] = $value;
-    }
-
-    public static function getVersion($site = null) {
-      if ( !isset($site) ) {
-        $site = 'OSCOM';
-      }
-
-      if ( !isset(static::$_version[$site]) ) {
-        if ( $site == 'OSCOM' ) {
-          $file = static::BASE_DIRECTORY . 'version.txt';
+    public static function setSiteApplication(string $application = null)
+    {
+        if (isset($application)) {
+            if (!static::siteApplicationExists($application)) {
+                trigger_error('Application \'' . $application . '\' does not exist for Site \'' . static::getSite() . '\', using default \'' . static::getDefaultSiteApplication() . '\'', E_USER_ERROR);
+                $application = null;
+            }
         } else {
-          $file = static::BASE_DIRECTORY . 'Custom/Site/' . $site . '/version.txt';
+            if (!empty($_GET)) {
+                $requested_application = HTML::sanitize(basename(key(array_slice($_GET, 0, 1, true))));
+
+                if ($requested_application == static::getSite()) {
+                    $requested_application = HTML::sanitize(basename(key(array_slice($_GET, 1, 1, true))));
+                }
+
+                if (preg_match('/^[A-Za-z0-9-_]+$/', $requested_application) && static::siteApplicationExists($requested_application)) {
+                    $application = $requested_application;
+                }
+            }
         }
 
-        $v = trim(file_get_contents($file));
-
-        if ( preg_match('/^(\d+\.)?(\d+\.)?(\d+)$/', $v) ) {
-          static::$_version[$site] = $v;
-        } else {
-          trigger_error('Version number is not numeric. Please verify: ' . $file);
+        if (empty($application)) {
+            $application = static::getDefaultSiteApplication();
         }
-      }
 
-      return static::$_version[$site];
+        static::$application = $application;
     }
 
-    protected static function setRequestType() {
-      static::$_request_type = (isset($_SERVER['HTTPS']) && (strtolower($_SERVER['HTTPS']) == 'on') ? 'SSL' : 'NONSSL');
+    public static function getSiteApplication(): ?string
+    {
+        return static::$application;
     }
 
-    public static function getRequestType() {
-      if ( !isset(static::$_request_type) ) {
-        static::setRequestType();
-      }
-
-      return static::$_request_type;
+    public static function getDefaultSiteApplication(): string
+    {
+        return call_user_func(['osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Controller', 'getDefaultApplication']);
     }
 
-    public static function getBaseUrl($site = null, $connection = 'SSL', $with_bootstrap = true)
+    public static function setIsRPC()
+    {
+        static::$is_rpc = true;
+    }
+
+    public static function isRPC(): bool
+    {
+        return static::$is_rpc;
+    }
+
+    public static function loadConfig()
+    {
+        $ini = parse_ini_file(static::BASE_DIRECTORY . 'Config/settings.ini', true);
+
+        if (file_exists(static::BASE_DIRECTORY . 'Config/local_settings.ini')) {
+            $local = parse_ini_file(static::BASE_DIRECTORY . 'Config/local_settings.ini', true);
+
+            $ini = array_merge($ini, $local);
+        }
+
+        $server = isset($_SERVER['SERVER_NAME']) ? HTML::sanitize($_SERVER['SERVER_NAME']) : null;
+
+        foreach ($ini as $group => $key) {
+            if (!isset($key['http_server']) && isset($key['urls'])) {
+                $urls = [];
+
+                foreach ($key['urls'] as $k => $v) {
+                    [$alias, $param] = explode('.', $k, 2);
+
+                    $urls[$alias][$param] = $v;
+                }
+
+                if (isset($urls['default'])) {
+                    $url = $urls['default'];
+
+                    foreach ($urls as $k => $v) {
+                        if (((static::getRequestType() === 'NONSSL') && ('http://' . $server == $v['http_server'])) || (isset($v['enable_ssl']) && ($v['enable_ssl'] === 'true') && isset($v['https_server']) && ('https://' . $server == $v['https_server']))) {
+                            $url = $urls[$k];
+                            $url['urls_key'] = $k;
+                            break;
+                        }
+                    }
+
+                    $ini[$group] = array_merge($ini[$group], $url);
+                }
+            }
+        }
+
+        static::$config = $ini;
+    }
+
+    public static function getConfig(string $key, string $group = null)
+    {
+        if (!isset($group)) {
+            $group = static::getSite();
+        }
+
+        return static::$config[$group][$key];
+    }
+
+    public static function configExists(string $key, string $group = null): bool
+    {
+        if (!isset($group)) {
+            $group = static::getSite();
+        }
+
+        return isset(static::$config[$group][$key]);
+    }
+
+    public static function setConfig(string $key, $value, string $group = null)
+    {
+        if (!isset($group)) {
+            $group = static::getSite();
+        }
+
+        static::$config[$group][$key] = $value;
+    }
+
+    public static function getVersion(string $site = 'OSCOM'): ?string
+    {
+        if (!isset(static::$version[$site])) {
+            if ($site == 'OSCOM') {
+                $file = static::BASE_DIRECTORY . 'version.txt';
+            } else {
+                if (!static::siteExists($site)) {
+                    trigger_error('OSCOM::getVersion(): Site "' . $site . '" does not exist.');
+
+                    return null;
+                }
+
+                $file = static::BASE_DIRECTORY . 'Custom/Site/' . $site . '/version.txt';
+
+                if (!file_exists($file)) {
+                    $file = static::BASE_DIRECTORY . 'Core/Site/' . $site . '/version.txt';
+                }
+            }
+
+            if (!file_exists($file)) {
+                trigger_error('OSCOM::getVersion(): Version file does not exist: ' . $file);
+
+                return null;
+            }
+
+            $v = trim(file_get_contents($file));
+
+            if (preg_match('/^(\d+\.)?(\d+\.)?(\d+)$/', $v)) {
+                static::$version[$site] = $v;
+            } else {
+                trigger_error('Version number is not numeric. Please verify: ' . $file);
+
+                return null;
+            }
+        }
+
+        return static::$version[$site];
+    }
+
+    protected static function setRequestType()
+    {
+        static::$request_type = (isset($_SERVER['HTTPS']) && (strtolower($_SERVER['HTTPS']) == 'on') ? 'SSL' : 'NONSSL');
+    }
+
+    public static function getRequestType(): string
+    {
+        if (!isset(static::$request_type)) {
+            static::setRequestType();
+        }
+
+        return static::$request_type;
+    }
+
+    public static function getBaseUrl(string $site = null, string $connection = 'SSL', bool $with_index_file = true): string
     {
         if (empty($site)) {
             $site = static::getSite();
         }
 
-        if (!in_array($connection, [
-            'NONSSL',
-            'SSL',
-            'AUTO'
-        ])) {
-            $connection = 'AUTO';
+        if (!in_array($connection, ['NONSSL', 'SSL', 'AUTO'])) {
+            $connection = 'SSL';
         }
 
         $link = '';
@@ -263,8 +294,12 @@
             $link = static::getConfig('http_server', $site) . static::getConfig('dir_ws_http_server', $site);
         }
 
-        if ($with_bootstrap === true) {
-            $link .= static::getConfig('bootstrap_file', 'OSCOM');
+        if ($with_index_file === true) {
+            $index_file = static::getConfig('index_file', 'OSCOM');
+
+            if (!empty($index_file)) {
+                $link .= $index_file;
+            }
         }
 
         return $link;
@@ -282,79 +317,78 @@
  * @return string The URL address.
  */
 
-    public static function getLink($site = null, $application = null, $parameters = null, $connection = 'SSL', $add_session_id = true, $search_engine_safe = true) {
-      if ( empty($site) ) {
-        $site = static::getSite();
-      }
+    public static function getLink(string $site = null, string $application = null, string $parameters = null, string $connection = 'SSL', bool $add_session_id = true, bool $search_engine_safe = true): string
+    {
+        if (empty($site)) {
+            $site = static::getSite();
+        }
 
-      if ( empty($application) && ($site == static::getSite()) ) {
-        $application = static::getSiteApplication();
-      }
+        if (empty($application) && ($site == static::getSite())) {
+            $application = static::getSiteApplication();
+        }
 
-      if ( !in_array($connection, array('NONSSL', 'SSL', 'AUTO')) ) {
-        $connection = 'NONSSL';
-      }
-
-      if ( !is_bool($add_session_id) ) {
-        $add_session_id = true;
-      }
-
-      if ( !is_bool($search_engine_safe) ) {
-        $search_engine_safe = true;
-      }
+        if (!in_array($connection, ['NONSSL', 'SSL', 'AUTO'])) {
+            $connection = 'SSL';
+        }
 
 // Wrapper for RPC links; RPC cannot perform cross domain requests
-      $real_site = ($site == 'RPC') ? $application : $site;
+        $real_site = ($site == 'RPC') ? $application : $site;
 
-      if ( $connection == 'AUTO' ) {
-        if ( (static::getRequestType() == 'SSL') && (static::getConfig('enable_ssl', $real_site) == 'true') ) {
-          $link = static::getConfig('https_server', $real_site) . static::getConfig('dir_ws_https_server', $real_site);
+        if ($connection == 'AUTO') {
+            if ((static::getRequestType() == 'SSL') && (static::getConfig('enable_ssl', $real_site) == 'true')) {
+                $link = static::getConfig('https_server', $real_site) . static::getConfig('dir_ws_https_server', $real_site);
+            } else {
+                $link = static::getConfig('http_server', $real_site) . static::getConfig('dir_ws_http_server', $real_site);
+            }
+        } elseif (($connection == 'SSL') && (static::getConfig('enable_ssl', $real_site) == 'true')) {
+            $link = static::getConfig('https_server', $real_site) . static::getConfig('dir_ws_https_server', $real_site);
         } else {
-          $link = static::getConfig('http_server', $real_site) . static::getConfig('dir_ws_http_server', $real_site);
+            $link = static::getConfig('http_server', $real_site) . static::getConfig('dir_ws_http_server', $real_site);
         }
-      } elseif ( ($connection == 'SSL') && (static::getConfig('enable_ssl', $real_site) == 'true') ) {
-        $link = static::getConfig('https_server', $real_site) . static::getConfig('dir_ws_https_server', $real_site);
-      } else {
-        $link = static::getConfig('http_server', $real_site) . static::getConfig('dir_ws_http_server', $real_site);
-      }
 
-      $link .= static::getConfig('bootstrap_file', 'OSCOM') . '?';
+        $index_file = static::getConfig('index_file', 'OSCOM');
 
-      if ( $site != static::getDefaultSite() ) {
-        $link .= $site . '&';
-      }
-
-      if ( !empty($application) && ($application != static::getDefaultSiteApplication()) ) {
-        $link .= $application . '&';
-      }
-
-      if ( !empty($parameters) ) {
-        $link .= HTML::output($parameters) . '&';
-      }
-
-      if ( ($add_session_id === true) && Registry::exists('Session') && Registry::get('Session')->hasStarted() && ((bool)ini_get('session.use_only_cookies') === false) ) {
-        if ( strlen(SID) > 0 ) {
-          $_sid = SID;
-        } elseif ( ((static::getRequestType() == 'NONSSL') && ($connection == 'SSL') && (static::getConfig('enable_ssl', $site) == 'true')) || ((static::getRequestType() == 'SSL') && ($connection != 'SSL')) ) {
-          if ( static::getConfig('http_cookie_domain', $site) != static::getConfig('https_cookie_domain', $site) ) {
-            $_sid = Registry::get('Session')->getName() . '=' . Registry::get('Session')->getID();
-          }
+        if (!empty($index_file)) {
+            $link .= $index_file;
         }
-      }
 
-      if ( isset($_sid) ) {
-        $link .= HTML::output($_sid);
-      }
+        $link .= '?';
 
-      while ( (substr($link, -1) == '&') || (substr($link, -1) == '?') ) {
-        $link = substr($link, 0, -1);
-      }
+        if ($site != static::getDefaultSite()) {
+            $link .= $site . '&';
+        }
 
-      if ( ($search_engine_safe === true) && Registry::exists('osC_Services') && Registry::get('osC_Services')->isStarted('sefu') ) {
-        $link = str_replace(array('?', '&', '='), array('/', '/', ','), $link);
-      }
+        if (!empty($application) && ($application != static::getDefaultSiteApplication())) {
+            $link .= $application . '&';
+        }
 
-      return $link;
+        if (!empty($parameters)) {
+            $link .= HTML::output($parameters) . '&';
+        }
+
+        if (($add_session_id === true) && Registry::exists('Session') && Registry::get('Session')->hasStarted() && ((bool)ini_get('session.use_only_cookies') === false)) {
+            if (strlen(SID) > 0) {
+                $_sid = SID;
+            } elseif (((static::getRequestType() == 'NONSSL') && ($connection == 'SSL') && (static::getConfig('enable_ssl', $site) == 'true')) || ((static::getRequestType() == 'SSL') && ($connection != 'SSL'))) {
+                if (static::getConfig('http_cookie_domain', $site) != static::getConfig('https_cookie_domain', $site)) {
+                    $_sid = Registry::get('Session')->getName() . '=' . Registry::get('Session')->getID();
+                }
+            }
+        }
+
+        if (isset($_sid)) {
+            $link .= HTML::output($_sid);
+        }
+
+        while ((substr($link, -1) == '&') || (substr($link, -1) == '?')) {
+            $link = substr($link, 0, -1);
+        }
+
+        if (($search_engine_safe === true) && Registry::exists('osC_Services') && Registry::get('osC_Services')->isStarted('sefu')) {
+            $link = str_replace(['?', '&', '='], ['/', '/', ','], $link);
+        }
+
+        return $link;
     }
 
 /**
@@ -366,22 +400,23 @@
  * @return string The URL address.
  */
 
-    public static function getPublicSiteLink($url, $parameters = null, $site = null) {
-      if ( !isset($site) ) {
-        $site = static::getSite();
-      }
+    public static function getPublicSiteLink(string $url, string $parameters = null, string $site = null): string
+    {
+        if (!isset($site)) {
+            $site = static::getSite();
+        }
 
-      $link = 'public/sites/' . $site . '/' . $url;
+        $link = 'public/sites/' . $site . '/' . $url;
 
-      if ( !empty($parameters) ) {
-        $link .= '?' . HTML::output($parameters);
-      }
+        if (!empty($parameters)) {
+            $link .= '?' . HTML::output($parameters);
+        }
 
-      while ( (substr($link, -1) == '&') || (substr($link, -1) == '?') ) {
-        $link = substr($link, 0, -1);
-      }
+        while ((substr($link, -1) == '&') || (substr($link, -1) == '?')) {
+            $link = substr($link, 0, -1);
+        }
 
-      return $link;
+        return $link;
     }
 
 /**
@@ -396,30 +431,32 @@
  * @return string The URL address.
  */
 
-    public static function getRPCLink($site = null, $application = null, $parameters = null, $connection = 'AUTO', $add_session_id = true, $search_engine_safe = true) {
-      if ( empty($site) ) {
-        $site = static::getSite();
-      }
+    public static function getRPCLink(string $site = null, string $application = null, string $parameters = null, string $connection = 'SSL', bool $add_session_id = true, bool $search_engine_safe = true): string
+    {
+        if (empty($site)) {
+            $site = static::getSite();
+        }
 
-      if ( empty($application) ) {
-        $application = static::getSiteApplication();
-      }
+        if (empty($application)) {
+            $application = static::getSiteApplication();
+        }
 
-      return static::getLink('RPC', $site, $application . '&' . $parameters, $connection, $add_session_id, $search_engine_safe);
+        return static::getLink('RPC', $site, $application . '&' . $parameters, $connection, $add_session_id, $search_engine_safe);
     }
 
-    public static function redirect(string $url, int $http_response_code = null) {
-      if ( (strpos($url, "\n") !== false) || (strpos($url, "\r") !== false) ) {
-        $url = static::getLink(OSCOM::getDefaultSite());
-      }
+    public static function redirect(string $url, int $http_response_code = null)
+    {
+        if ((strpos($url, "\n") !== false) || (strpos($url, "\r") !== false)) {
+            $url = static::getLink(OSCOM::getDefaultSite());
+        }
 
-      if ( strpos($url, '&amp;') !== false ) {
-        $url = str_replace('&amp;', '&', $url);
-      }
+        if (strpos($url, '&amp;') !== false) {
+            $url = str_replace('&amp;', '&', $url);
+        }
 
-      header('Location: ' . $url, true, $http_response_code);
+        header('Location: ' . $url, true, $http_response_code);
 
-      exit;
+        exit;
     }
 
 /**
@@ -430,14 +467,15 @@
  * @return string The language definition
  */
 
-    public static function getDef($key, $values = null) {
-      $def = Registry::get('Language')->get($key);
+    public static function getDef(string $key, array $values = null): string
+    {
+        $def = Registry::get('Language')->get($key);
 
-      if ( is_array($values) && !empty($values) ) {
-        $def = str_replace(array_keys($values), array_values($values), $def);
-      }
+        if (!empty($values)) {
+            $def = str_replace(array_keys($values), array_values($values), $def);
+        }
 
-      return $def;
+        return $def;
     }
 
 /**
@@ -448,55 +486,52 @@
  * @param string $type The namespace type the database query is stored in [ Core, Site, CoreUpdate (@since v3.0.2), Application (default) ]
  * @return mixed The result of the database query
  */
-    public static function callDB($procedure, $data = null, $type = 'Application') {
-      $OSCOM_PDO = Registry::get('PDO');
+    public static function callDB(string $procedure, array $data = null, string $type = 'Application')
+    {
+        $OSCOM_PDO = Registry::get('PDO');
 
-      $call = explode('\\', $procedure);
+        $call = explode('\\', $procedure);
 
-      switch ( $type ) {
-        case 'Core':
+        switch ($type) {
+            case 'Core':
+                $procedure = array_pop($call);
+                $ns = 'osCommerce\\OM\\Core';
 
-          $procedure = array_pop($call);
-          $ns = 'osCommerce\\OM\\Core';
+                if (!empty($call)) {
+                    $ns .= '\\' . implode('\\', $call);
+                }
 
-          if ( !empty($call) ) {
-            $ns .= '\\' . implode('\\', $call);
-          }
+                break;
 
-          break;
+            case 'Site':
+                $ns = 'osCommerce\\OM\\Core\\Site\\' . $call[0];
+                $procedure = $call[1];
 
-        case 'Site':
+                break;
 
-          $ns = 'osCommerce\\OM\\Core\\Site\\' . $call[0];
-          $procedure = $call[1];
+            case 'CoreUpdate':
+                $ns = 'osCommerce\\OM\\Work\\CoreUpdate\\' . $call[0];
+                $procedure = $call[1];
 
-          break;
+                break;
 
-        case 'CoreUpdate':
-
-          $ns = 'osCommerce\\OM\\Work\\CoreUpdate\\' . $call[0];
-          $procedure = $call[1];
-
-          break;
-
-        case 'Application':
-        default:
-
-          $ns = 'osCommerce\\OM\\Core\\Site\\' . $call[0] . '\\Application\\' . $call[1];
-          $procedure = $call[2];
-      }
-
-      $db_driver = $OSCOM_PDO->getDriver();
-
-      if ( !class_exists($ns . '\\SQL\\' . $db_driver . '\\' . $procedure) ) {
-        if ( $OSCOM_PDO->hasDriverParent() && class_exists($ns . '\\SQL\\' . $OSCOM_PDO->getDriverParent() . '\\' . $procedure) ) {
-          $db_driver = $OSCOM_PDO->getDriverParent();
-        } else {
-          $db_driver = 'ANSI';
+            case 'Application':
+            default:
+                $ns = 'osCommerce\\OM\\Core\\Site\\' . $call[0] . '\\Application\\' . $call[1];
+                $procedure = $call[2];
         }
-      }
 
-      return call_user_func(array($ns . '\\SQL\\' . $db_driver . '\\' . $procedure, 'execute'), $data);
+        $db_driver = $OSCOM_PDO->getDriver();
+
+        if (!class_exists($ns . '\\SQL\\' . $db_driver . '\\' . $procedure)) {
+            if ($OSCOM_PDO->hasDriverParent() && class_exists($ns . '\\SQL\\' . $OSCOM_PDO->getDriverParent() . '\\' . $procedure)) {
+                $db_driver = $OSCOM_PDO->getDriverParent();
+            } else {
+                $db_driver = 'ANSI';
+            }
+        }
+
+        return call_user_func([$ns . '\\SQL\\' . $db_driver . '\\' . $procedure, 'execute'], $data);
     }
 
 /**
@@ -513,16 +548,17 @@
  * @since v3.0.0
  */
 
-    public static function setCookie($name, $value = null, $expires = 0, $path = null, $domain = null, $secure = false, $httpOnly = false) {
-      if ( !isset($path) ) {
-        $path = (static::getRequestType() == 'NONSSL') ? static::getConfig('http_cookie_path') : static::getConfig('https_cookie_path');
-      }
+    public static function setCookie(string $name, string $value = null, int $expires = 0, string $path = null, string $domain = null, bool $secure = false, bool $httpOnly = false): bool
+    {
+        if (!isset($path)) {
+            $path = (static::getRequestType() == 'NONSSL') ? static::getConfig('http_cookie_path') : static::getConfig('https_cookie_path');
+        }
 
-      if ( !isset($domain) ) {
-        $domain = (static::getRequestType() == 'NONSSL') ? static::getConfig('http_cookie_domain') : static::getConfig('https_cookie_domain');
-      }
+        if (!isset($domain)) {
+            $domain = (static::getRequestType() == 'NONSSL') ? static::getConfig('http_cookie_domain') : static::getConfig('https_cookie_domain');
+        }
 
-      return setcookie($name, $value, $expires, $path, $domain, $secure, $httpOnly);
+        return setcookie($name, $value, $expires, $path, $domain, $secure, $httpOnly);
     }
 
 /**
@@ -531,16 +567,9 @@
  * @since v3.0.0
  */
 
-    public static function getIPAddress() {
-      if ( isset($_SERVER['HTTP_X_FORWARDED_FOR']) ) {
-        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
-      } elseif ( isset($_SERVER['HTTP_CLIENT_IP']) ) {
-        $ip = $_SERVER['HTTP_CLIENT_IP'];
-      } else {
-        $ip = $_SERVER['REMOTE_ADDR'];
-      }
-
-      return $ip;
+    public static function getIPAddress(): string
+    {
+        return $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
     }
 
 /**
@@ -551,42 +580,70 @@
  * @since v3.0.0
  */
 
-    public static function getAllGET($exclude = null) {
-      if ( !is_array($exclude) ) {
-        if ( !empty($exclude) ) {
-          $exclude = array($exclude);
-        } else {
-          $exclude = array();
+    public static function getAllGET($exclude = null): string
+    {
+        if (!is_array($exclude)) {
+            if (!empty($exclude)) {
+                $exclude = [$exclude];
+            } else {
+                $exclude = [];
+            }
         }
-      }
 
-      $params = '';
+        $array = [
+            static::getSite(),
+            static::getSiteApplication(),
+            'error',
+            'x',
+            'y'
+        ];
 
-      $array = array(static::getSite(),
-                     static::getSiteApplication(),
-                     Registry::get('Session')->getName(),
-                     'error',
-                     'x',
-                     'y');
-
-      $exclude = array_merge($exclude, $array);
-
-      foreach ( $_GET as $key => $value ) {
-        if ( !in_array($key, $exclude) ) {
-          $params .= $key . (!empty($value) ? '=' . $value : '') . '&';
+        if (Registry::exists('Session')) {
+            $array[] = Registry::get('Session')->getName();
         }
-      }
 
-      if ( !empty($params) ) {
-        $params = substr($params, 0, -1);
-      }
+        $exclude = array_merge($exclude, $array);
 
-      return $params;
+        $params = '';
+
+        foreach ($_GET as $key => $value) {
+            if (!in_array($key, $exclude)) {
+                $params .= $key . (!empty($value) ? '=' . $value : '') . '&';
+            }
+        }
+
+        if (!empty($params)) {
+            $params = substr($params, 0, -1);
+        }
+
+        return $params;
     }
 
-    public static function isValidClassName(string $classname)
+    public static function isValidClassName(string $classname): bool
     {
         return preg_match(static::VALID_CLASS_NAME_REGEXP, $classname) === 1;
     }
-  }
-?>
+
+    public static function checkOffline()
+    {
+        if ((static::configExists('offline', 'OSCOM') && (static::getConfig('offline', 'OSCOM') === 'true')) || (static::configExists('offline') && (static::getConfig('offline') === 'true'))) {
+            if (RunScript::$is_running === true) {
+                if (RunScript::$override_offline === true) {
+                    return true;
+                }
+
+                RunScript::error('Currently in maintenance mode. Use --override-offline to continue executing the script.');
+            } else {
+                HttpRequest::setResponseCode(503);
+
+                $content = ErrorHandler::getErrorPageContents('maintenance');
+
+                if (!is_null($content)) {
+                    echo $content;
+                }
+            }
+
+            exit;
+        }
+    }
+}

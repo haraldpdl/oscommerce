@@ -9,11 +9,14 @@
 namespace osCommerce\OM\Core;
 
 use osCommerce\OM\Core\{
+    HttpRequest,
     OSCOM,
     RunScriptException
 };
 
 class RunScript {
+    public static $is_running = false;
+    public static $override_offline = false;
     public static $linebreak;
     public static $php_binary;
     public static $previous_error_handler;
@@ -28,10 +31,14 @@ class RunScript {
         if (PHP_SAPI === 'cli') {
             static::$php_binary = PHP_BINARY;
 
-            $opts = getopt('', ['php-binary::', 'script:', 'site::', 'app::']);
+            $opts = getopt('', ['php-binary::', 'override-offline::', 'script:', 'site::', 'app::']);
 
             if (isset($opts['php-binary'])) {
                 static::$php_binary = $opts['php-binary'];
+            }
+
+            if (isset($opts['override-offline'])) {
+                static::$override_offline = true;
             }
 
             if (isset($opts['script'])) {
@@ -50,6 +57,10 @@ class RunScript {
 
             if (empty($runscript_key) || !isset($_POST['key']) || ($_POST['key'] !== $runscript_key)) {
                 exit;
+            }
+
+            if (isset($_GET['override-offline'])) {
+                static::$override_offline = true;
             }
 
             $script = $_GET['RunScript'];
@@ -94,6 +105,8 @@ class RunScript {
                 throw new RunScriptException('Script class does not implement osCommerce\\OM\\Core\\RunScriptInterface: ' . $script_class);
             }
 
+            static::$is_running = true;
+
             OSCOM::setSite();
 
             call_user_func([
@@ -126,8 +139,8 @@ class RunScript {
 
     public static function error(string $message)
     {
-        if ((PHP_SAPI !== 'cli') && !headers_sent()) {
-            http_response_code(400);
+        if (PHP_SAPI !== 'cli') {
+            HttpRequest::setResponseCode(400);
         }
 
         trigger_error('[RunScript] ' . $message);

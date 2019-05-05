@@ -10,6 +10,7 @@ namespace osCommerce\OM\Core;
 
 use osCommerce\OM\Core\{
     DateTime,
+    HttpRequest,
     Language,
     OSCOM,
     PDO,
@@ -252,50 +253,76 @@ class ErrorHandler
 
             try {
                 if (!OSCOM::isRPC()) {
-                    $page = null;
+                    trigger_error('$_GET = ' . json_encode($_GET));
 
-                    if (Registry::exists('Language') && Registry::exists('Template')) {
-                        $OSCOM_Template = Registry::get('Template');
+                    HttpRequest::setResponseCode(503);
 
-                        if (!$OSCOM_Template->valueExists('html_base_href')) {
-                            $OSCOM_Template->setValue('html_base_href', $OSCOM_Template->getBaseUrl());
-                        }
-
-                        $file = OSCOM::BASE_DIRECTORY . 'Custom/Site/' . OSCOM::getSite() . '/Template/' . $OSCOM_Template->getCode() . '/ErrorHandler/pages/general.html';
-
-                        if (!file_exists($file)) {
-                            $file = OSCOM::BASE_DIRECTORY . 'Core/Site/' . OSCOM::getSite() . '/Template/' . $OSCOM_Template->getCode() . '/ErrorHandler/pages/general.html';
-                        }
-
-                        if (file_exists($file)) {
-                            $page = $OSCOM_Template->getContent($file);
-                        }
-                    }
-
-                    if (is_null($page)) {
-                        $page = file_get_contents(__DIR__ . '/ErrorHandler/pages/general.html');
-
-                        if (!is_null(OSCOM::getSite()) && !is_null(OSCOM::getSiteApplication())) {
-                            $url = OSCOM::getLink();
-
-                            $page = str_replace('{link}{link}', $url, $page);
-                        }
-                    }
+                    $page = static::getErrorPageContents();
 
                     if (!is_null($page)) {
-                        trigger_error('$_GET = ' . json_encode($_GET));
-
-                        if (!headers_sent()) {
-                            http_response_code(503);
-                        }
-
                         echo $page;
-
-                        exit;
                     }
+
+                    exit;
                 }
             } catch (\Exception $e) {
             }
         }
+    }
+
+    public static function getErrorPageContents(string $page = 'general'): ?string
+    {
+        if (isset($page)) {
+            $page = basename($page);
+        }
+
+        $site = OSCOM::getSite();
+        $content = null;
+
+        if (!is_null($site)) {
+            if (Registry::exists('Template') && Registry::exists('Language')) {
+                $OSCOM_Template = Registry::get('Template');
+
+                $file = OSCOM::BASE_DIRECTORY . 'Custom/Site/' . OSCOM::getSite() . '/Template/' . $OSCOM_Template->getCode() . '/ErrorHandler/pages/' . $page . '.html';
+
+                if (!is_file($file)) {
+                    $file = OSCOM::BASE_DIRECTORY . 'Core/Site/' . OSCOM::getSite() . '/Template/' . $OSCOM_Template->getCode() . '/ErrorHandler/pages/' . $page . '.html';
+                }
+
+                if (is_file($file)) {
+                    if (!$OSCOM_Template->valueExists('html_base_href')) {
+                        $OSCOM_Template->setValue('html_base_href', $OSCOM_Template->getBaseUrl());
+                    }
+
+                    $content = $OSCOM_Template->getContent($file);
+                }
+            } else {
+                $file = OSCOM::BASE_DIRECTORY . 'Custom/Site/' . OSCOM::getSite() . '/ErrorHandler/pages/' . $page . '.html';
+
+                if (!is_file($file)) {
+                    $file = OSCOM::BASE_DIRECTORY . 'Core/Site/' . OSCOM::getSite() . '/ErrorHandler/pages/' . $page . '.html';
+                }
+
+                if (is_file($file)) {
+                    $content = file_get_contents($file);
+                }
+            }
+        }
+
+        if (is_null($content)) {
+            $file = OSCOM::BASE_DIRECTORY . 'Custom/ErrorHandler/pages/' . $page . '.html';
+
+            if (!is_file($file)) {
+                $file = OSCOM::BASE_DIRECTORY . 'Core/ErrorHandler/pages/' . $page . '.html';
+            }
+
+            if (is_file($file)) {
+                $content = file_get_contents($file);
+            } else {
+                trigger_error('ErrorHandler::getErrorPageContents(): Page "' . $page . '" not found.');
+            }
+        }
+
+        return $content;
     }
 }
