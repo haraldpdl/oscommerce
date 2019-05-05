@@ -72,6 +72,8 @@ spl_autoload_register(function($class) {
     }
 });
 
+require(OSCOM::BASE_DIRECTORY . 'External/vendor/autoload.php');
+
 OSCOM::loadConfig();
 DateTime::setTimeZone();
 ErrorHandler::initialize();
