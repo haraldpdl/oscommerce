@@ -43,6 +43,8 @@ class PDOStatement extends \PDOStatement
             trigger_error($e->getMessage());
 
             $result = false;
+
+            throw $e;
         }
 
         return $result;
@@ -83,6 +85,8 @@ class PDOStatement extends \PDOStatement
 
                 trigger_error($e->getMessage());
                 trigger_error($this->queryString);
+
+                throw $e;
             }
         }
 
@@ -116,6 +120,8 @@ class PDOStatement extends \PDOStatement
                 trigger_error($e->getMessage());
 
                 $this->result = false;
+
+                throw $e;
             }
         }
 
@@ -144,6 +150,8 @@ class PDOStatement extends \PDOStatement
                 trigger_error($e->getMessage());
 
                 $this->result = false;
+
+                throw $e;
             }
         }
 
