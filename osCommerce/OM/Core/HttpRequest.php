@@ -2,67 +2,92 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  namespace osCommerce\OM\Core;
+namespace osCommerce\OM\Core;
 
-  class HttpRequest {
-    protected static $_drivers = array('HttpRequest', 'Curl', 'Stream');
+use GuzzleHttp\Client as GuzzleClient;
+
+class HttpRequest
+{
 
 /**
- *
- * @param array $parameters url, header, parameters, method, cafile, certificate
- * @param string $driver
+ * @param array $data url, header, parameters, method, cafile, certificate, format
  */
 
-    public static function getResponse($parameters, $driver = null) {
-      if ( !isset($driver) ) {
-        foreach ( static::$_drivers as $d ) {
-          if ( call_user_func(array('osCommerce\\OM\\Core\\HttpRequest\\' . $d, 'canUse')) ) {
-            $driver = $d;
-
-            break;
-          }
+    public static function getResponse(array $data)
+    {
+        if (!isset($data['header']) || !is_array($data['header'])) {
+            $data['header'] = [];
         }
-      }
 
-      if ( !isset($parameters['header']) || !is_array($parameters['header'])) {
-        $parameters['header'] = array();
-      }
+        if (!isset($data['parameters'])) {
+            $data['parameters'] = '';
+        }
 
-      if ( !isset($parameters['parameters']) ) {
-        $parameters['parameters'] = '';
-      }
+        if (!isset($data['method'])) {
+            $data['method'] = !empty($data['parameters']) ? 'post' : 'get';
+        }
 
-      if ( !isset($parameters['method']) ) {
-        if ( strlen($parameters['parameters']) > 0 ) {
-          $parameters['method'] = 'post';
+        if (!isset($data['cafile'])) {
+            $data['cafile'] = OSCOM::BASE_DIRECTORY . 'External/cacert.pem';
+        }
+
+        if (isset($data['format']) && !in_array($data['format'], ['json'])) {
+            trigger_error('HttpRequest::getResponse(): Unknown "format": ' . $data['format']);
+
+            unset($data['format']);
+        }
+
+        $options = [];
+
+        if (!empty($data['header'])) {
+            foreach ($data['header'] as $h) {
+                [$key, $value] = explode(':', $h, 2);
+
+                $options['headers'][$key] = $value;
+
+                unset($key);
+                unset($value);
+            }
+        }
+
+        if (isset($data['format']) && ($data['format'] === 'json')) {
+          $options['json'] = $data['parameters'];
         } else {
-          $parameters['method'] = 'get';
+            if (($data['method'] === 'post') && !empty($data['parameters'])) {
+                $options['body'] = $data['parameters'];
+            }
         }
-      }
 
-      $parameters['server'] = parse_url($parameters['url']);
+        if (isset($data['cafile']) && is_file($data['cafile'])) {
+            $options['verify'] = $data['cafile'];
+        }
 
-      if ( !isset($parameters['server']['port']) ) {
-        $parameters['server']['port'] = ($parameters['server']['scheme'] == 'https') ? 443 : 80;
-      }
+        if (isset($data['certificate']) && is_file($data['certificate'])) {
+            $options['cert'] = $data['certificate'];
+        }
 
-      if ( !isset($parameters['server']['path']) ) {
-        $parameters['server']['path'] = '/';
-      }
+        $result = false;
 
-      if ( isset($parameters['server']['user']) && isset($parameters['server']['pass']) ) {
-        $parameters['header'][] = 'Authorization: Basic ' . base64_encode($parameters['server']['user'] . ':' . $parameters['server']['pass']);
-      }
+        try {
+            $client = new GuzzleClient();
+            $response = $client->request($data['method'], $data['url'], $options);
 
-      if ( !isset($parameters['cafile']) && file_exists(OSCOM::BASE_DIRECTORY . 'External/cacert.pem') ) {
-        $parameters['cafile'] = OSCOM::BASE_DIRECTORY . 'External/cacert.pem';
-      }
+            if ($response->getStatusCode() === 200) {
+                $result = $response->getBody()->getContents();
 
-      return trim(call_user_func(array('osCommerce\\OM\\Core\\HttpRequest\\' . $driver, 'execute'), $parameters));
+                if (isset($data['format']) && ($data['format'] === 'json')) {
+                    $result = json_decode($result, true);
+                }
+            }
+        } catch (\Exception $e) {
+            trigger_error($e->getMessage());
+        }
+
+        return $result;
     }
 
 /**
@@ -70,77 +95,18 @@
  *
  * @param int $code The HTTP status code to set
  * @return boolean
- * @since v3.0.3
  */
 
-    public static function setResponseCode($code) {
-      if ( !is_numeric($code) ) {
-        trigger_error('HttpRequest::setResponseCode() - $code value is not numeric.', E_USER_ERROR);
+    public static function setResponseCode(int $code): bool
+    {
+        if (headers_sent()) {
+            trigger_error('HttpRequest::setResponseCode() - headers already sent, cannot set response code.', E_USER_ERROR);
 
-        return false;
-      }
+            return false;
+        }
 
-      if ( headers_sent() ) {
-        trigger_error('HttpRequest::setResponseCode() - headers already sent, cannot set response code.', E_USER_ERROR);
-
-        return false;
-      }
-
-      if ( function_exists('http_response_code') ) { /* HPDL PHP 5.4.0 */
         http_response_code($code);
 
         return true;
-      } else {
-        $codes = array('100' => 'Continue',
-                       '101' => 'Switching Protocols',
-                       '200' => 'OK',
-                       '201' => 'Created',
-                       '202' => 'Accepted',
-                       '203' => 'Non-Authoritative Information',
-                       '204' => 'No Content',
-                       '205' => 'Reset Content',
-                       '206' => 'Partial Content',
-                       '300' => 'Multiple Choices',
-                       '301' => 'Moved Permanently',
-                       '302' => 'Moved Temporarily',
-                       '303' => 'See Other',
-                       '304' => 'Not Modified',
-                       '305' => 'Use Proxy',
-                       '400' => 'Bad Request',
-                       '401' => 'Unauthorized',
-                       '402' => 'Payment Required',
-                       '403' => 'Forbidden',
-                       '404' => 'Not Found',
-                       '405' => 'Method Not Allowed',
-                       '406' => 'Not Acceptable',
-                       '407' => 'Proxy Authentication Required',
-                       '408' => 'Request Time-out',
-                       '409' => 'Conflict',
-                       '410' => 'Gone',
-                       '411' => 'Length Required',
-                       '412' => 'Precondition Failed',
-                       '413' => 'Request Entity Too Large',
-                       '414' => 'Request-URI Too Large',
-                       '415' => 'Unsupported Media Type',
-                       '500' => 'Internal Server Error',
-                       '501' => 'Not Implemented',
-                       '502' => 'Bad Gateway',
-                       '503' => 'Service Unavailable',
-                       '504' => 'Gateway Time-out',
-                       '505' => 'HTTP Version not supported');
-
-        if ( isset($codes[$code]) ) {
-          $protocol = (isset($_SERVER['SERVER_PROTOCOL']) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.0');
-
-          header($protocol . ' ' . $code . ' ' . $codes[$code]);
-
-          return true;
-        } else {
-          trigger_error('HttpRequest::setResponseCode() - Unknown status code \'' . $code . '\'.', E_USER_ERROR);
-        }
-      }
-
-      return false;
     }
-  }
-?>
+}
