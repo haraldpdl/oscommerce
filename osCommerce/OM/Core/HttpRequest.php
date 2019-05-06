@@ -58,13 +58,11 @@ class HttpRequest
             $options['json'] = $data['parameters'];
         } else {
             if (($data['method'] === 'post') && !empty($data['parameters'])) {
-                if (!is_array($data['parameters'])) {
-                    parse_str($data['parameters'], $output);
-
-                    $data['parameters'] = $output;
+                if (!isset($options['headers']['Content-Type'])) {
+                    $options['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
                 }
 
-                $options['form_params'] = $data['parameters'];
+                $options['body'] = $data['parameters'];
             }
         }
 
