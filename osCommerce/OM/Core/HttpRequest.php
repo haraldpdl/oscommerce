@@ -55,10 +55,16 @@ class HttpRequest
         }
 
         if (isset($data['format']) && ($data['format'] === 'json')) {
-          $options['json'] = $data['parameters'];
+            $options['json'] = $data['parameters'];
         } else {
             if (($data['method'] === 'post') && !empty($data['parameters'])) {
-                $options['body'] = $data['parameters'];
+                if (!is_array($data['parameters'])) {
+                    parse_str($data['parameters'], $output);
+
+                    $data['parameters'] = $output;
+                }
+
+                $options['form_params'] = $data['parameters'];
             }
         }
 
