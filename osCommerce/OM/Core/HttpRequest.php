@@ -80,12 +80,10 @@ class HttpRequest
             $client = new GuzzleClient();
             $response = $client->request($data['method'], $data['url'], $options);
 
-            if ($response->getStatusCode() === 200) {
-                $result = $response->getBody()->getContents();
+            $result = $response->getBody()->getContents();
 
-                if (isset($data['format']) && ($data['format'] === 'json')) {
-                    $result = json_decode($result, true);
-                }
+            if (isset($data['format']) && ($data['format'] === 'json')) {
+                $result = json_decode($result, true);
             }
         } catch (\Exception $e) {
             trigger_error($e->getMessage());
