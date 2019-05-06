@@ -73,6 +73,10 @@ class OSCOM
     {
         $site = static::getConfig('default_site', 'OSCOM');
 
+        if (!isset(static::$config[$site])) {
+            static::loadConfig($site);
+        }
+
         if (isset($_SERVER['SERVER_NAME'])) {
             $server = HTML::sanitize($_SERVER['SERVER_NAME']);
 
@@ -149,51 +153,79 @@ class OSCOM
         return static::$is_rpc;
     }
 
-    public static function loadConfig()
+    public static function loadConfig(string $site = null)
     {
-        $ini = parse_ini_file(static::BASE_DIRECTORY . 'Config/settings.ini', true);
-
-        if (file_exists(static::BASE_DIRECTORY . 'Config/local_settings.ini')) {
-            $local = parse_ini_file(static::BASE_DIRECTORY . 'Config/local_settings.ini', true);
-
-            $ini = array_merge($ini, $local);
+        if (!isset($site)) {
+            $site = 'OSCOM';
         }
 
-        $server = isset($_SERVER['SERVER_NAME']) ? HTML::sanitize($_SERVER['SERVER_NAME']) : null;
+        $file = static::BASE_DIRECTORY;
 
-        foreach ($ini as $group => $key) {
-            if (!isset($key['http_server']) && isset($key['urls'])) {
-                $urls = [];
+        if ($site !== 'OSCOM') {
+            $file .= 'Core/Site/' . basename($site) . '/';
+        }
 
-                foreach ($key['urls'] as $k => $v) {
-                    [$alias, $param] = explode('.', $k, 2);
+        $file .= 'Config/settings.ini';
 
-                    $urls[$alias][$param] = $v;
-                }
+        while (true) {
+            if (is_file($file)) {
+                $ini = parse_ini_file($file);
 
-                if (isset($urls['default'])) {
-                    $url = $urls['default'];
+                static::$config[$site] = array_merge(static::$config[$site] ?? [], $ini);
+            }
 
-                    foreach ($urls as $k => $v) {
-                        if (((static::getRequestType() === 'NONSSL') && ('http://' . $server == $v['http_server'])) || (isset($v['enable_ssl']) && ($v['enable_ssl'] === 'true') && isset($v['https_server']) && ('https://' . $server == $v['https_server']))) {
-                            $url = $urls[$k];
-                            $url['urls_key'] = $k;
-                            break;
-                        }
+            $local_file = dirname($file) . '/local.ini';
+
+            if (is_file($local_file)) {
+                $local = parse_ini_file($local_file);
+
+                static::$config[$site] = array_merge(static::$config[$site] ?? [], $local);
+            }
+
+            if (mb_strpos($file, '/Core/Site/') !== false) {
+                $file = str_replace('/Core/Site/', '/Custom/Site/', $file);
+
+                continue;
+            }
+
+            break;
+        }
+
+        if (!isset(static::$config[$site]['http_server']) && isset(static::$config[$site]['urls'])) {
+            $server = isset($_SERVER['SERVER_NAME']) ? HTML::sanitize($_SERVER['SERVER_NAME']) : null;
+
+            $urls = [];
+
+            foreach (static::$config[$site]['urls'] as $k => $v) {
+                [$alias, $param] = explode('.', $k, 2);
+
+                $urls[$alias][$param] = $v;
+            }
+
+            if (isset($urls['default'])) {
+                $url = $urls['default'];
+
+                foreach ($urls as $k => $v) {
+                    if (((static::getRequestType() === 'NONSSL') && ('http://' . $server == $v['http_server'])) || (isset($v['enable_ssl']) && ($v['enable_ssl'] === 'true') && isset($v['https_server']) && ('https://' . $server == $v['https_server']))) {
+                        $url = $urls[$k];
+                        $url['urls_key'] = $k;
+                        break;
                     }
-
-                    $ini[$group] = array_merge($ini[$group], $url);
                 }
+
+                static::$config[$site] = array_merge(static::$config[$site], $url);
             }
         }
-
-        static::$config = $ini;
     }
 
     public static function getConfig(string $key, string $group = null)
     {
         if (!isset($group)) {
             $group = static::getSite();
+        }
+
+        if (!isset(static::$config[$group])) {
+            static::loadConfig($group);
         }
 
         return static::$config[$group][$key];
@@ -203,6 +235,10 @@ class OSCOM
     {
         if (!isset($group)) {
             $group = static::getSite();
+        }
+
+        if (!isset(static::$config[$group])) {
+            static::loadConfig($group);
         }
 
         return isset(static::$config[$group][$key]);
@@ -346,13 +382,7 @@ class OSCOM
             $link = static::getConfig('http_server', $real_site) . static::getConfig('dir_ws_http_server', $real_site);
         }
 
-        $index_file = static::getConfig('index_file', 'OSCOM');
-
-        if (!empty($index_file)) {
-            $link .= $index_file;
-        }
-
-        $link .= '?';
+        $link .= static::getConfig('index_file', 'OSCOM') . static::getConfig('query_string_initiator', 'OSCOM');
 
         if ($site != static::getDefaultSite()) {
             $link .= $site . '&';
@@ -380,12 +410,12 @@ class OSCOM
             $link .= HTML::output($_sid);
         }
 
-        while ((substr($link, -1) == '&') || (substr($link, -1) == '?')) {
+        while ((substr($link, -1) == '&') || (substr($link, -1) == static::getConfig('query_string_initiator', 'OSCOM'))) {
             $link = substr($link, 0, -1);
         }
 
         if (($search_engine_safe === true) && Registry::exists('osC_Services') && Registry::get('osC_Services')->isStarted('sefu')) {
-            $link = str_replace(['?', '&', '='], ['/', '/', ','], $link);
+            $link = str_replace([static::getConfig('query_string_initiator', 'OSCOM'), '&', '='], ['/', '/', ','], $link);
         }
 
         return $link;

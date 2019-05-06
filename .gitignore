@@ -1,5 +1,6 @@
 osCommerce/OM/Work/*
 !osCommerce/OM/Work/CoreUpdate/update.phar.pubkey
-osCommerce/OM/Config/local_settings.ini
+osCommerce/OM/Config/local.ini
+osCommerce/OM/Core/Site/*/Config/local.ini
 osCommerce/OM/Custom/*
 !osCommerce/OM/Custom/README
