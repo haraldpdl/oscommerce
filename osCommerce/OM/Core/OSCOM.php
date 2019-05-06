@@ -69,30 +69,59 @@ class OSCOM
         return static::$site;
     }
 
-    public static function getDefaultSite(): string
+    public static function getSites(): array
     {
-        $site = static::getConfig('default_site', 'OSCOM');
+        $sites = [];
 
-        if (!isset(static::$config[$site])) {
-            static::loadConfig($site);
+        $OSCOM_DL = new DirectoryListing(static::BASE_DIRECTORY . 'Core/Site/');
+        $OSCOM_DL->setIncludeFiles(false);
+
+        foreach ($OSCOM_DL->getFiles() as $f) {
+            $sites[] = $f['name'];
         }
 
-        if (isset($_SERVER['SERVER_NAME'])) {
-            $server = HTML::sanitize($_SERVER['SERVER_NAME']);
+        $OSCOM_DL = new DirectoryListing(static::BASE_DIRECTORY . 'Custom/Site/');
+        $OSCOM_DL->setIncludeFiles(false);
 
-            $sites = [];
+        foreach ($OSCOM_DL->getFiles() as $f) {
+            if (!in_array($f['name'], $sites)) {
+                $sites[] = $f['name'];
+            }
+        }
 
-            foreach (static::$config as $group => $key) {
-                if (isset($key['http_server']) || isset($key['https_server'])) {
-                    if ((isset($key['http_server']) && ('http://' . $server == $key['http_server'])) || (isset($key['https_server']) && ('https://' . $server == $key['https_server']))) {
-                        $sites[] = $group;
-                    }
+        return $sites;
+    }
+
+    public static function getDefaultSite(): string
+    {
+        static $site;
+
+        if (!isset($site)) {
+            $site = static::getConfig('default_site', 'OSCOM');
+
+            foreach (static::getSites() as $s) {
+                if (!isset(static::$config[$s])) {
+                    static::loadConfig($s);
                 }
             }
 
-            if (count($sites) > 0) {
-                if (!in_array($site, $sites)) {
-                    $site = $sites[0];
+            if (isset($_SERVER['SERVER_NAME'])) {
+                $server = HTML::sanitize($_SERVER['SERVER_NAME']);
+
+                $sites = [];
+
+                foreach (static::$config as $group => $key) {
+                    if (isset($key['http_server']) || isset($key['https_server'])) {
+                        if ((isset($key['http_server']) && ('http://' . $server == $key['http_server'])) || (isset($key['https_server']) && ('https://' . $server == $key['https_server']))) {
+                            $sites[] = $group;
+                        }
+                    }
+                }
+
+                if (count($sites) > 0) {
+                    if (!in_array($site, $sites)) {
+                        $site = $sites[0];
+                    }
                 }
             }
         }
