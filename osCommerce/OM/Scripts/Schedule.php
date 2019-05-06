@@ -153,10 +153,10 @@ class Schedule implements \osCommerce\OM\Core\RunScriptInterface
 
         foreach ($tasks as $task) {
             if (PHP_SAPI === 'cli') {
-                passthru(RunScript::$php_binary . ' ' . escapeshellarg(OSCOM::PUBLIC_DIRECTORY . 'index.php') . ' --script=Schedule --task=' . escapeshellarg($task));
+                passthru(RunScript::$php_binary . ' ' . escapeshellarg(OSCOM::PUBLIC_DIRECTORY . 'index.php') . ' --script=Schedule --task=' . escapeshellarg($task) . (RunScript::$override_offline ? ' --override-offline' : ''));
             } elseif (isset($_GET['RunScript'])) {
                 echo HttpRequest::getResponse([
-                    'url' => OSCOM::getLink(null, null, 'RunScript=Schedule&task=' . $task, 'SSL', false),
+                    'url' => OSCOM::getLink(null, null, 'RunScript=Schedule&task=' . $task . (RunScript::$override_offline ? '&override-offline' : ''), 'SSL', false),
                     'parameters' => 'key=' . OSCOM::getConfig('runscript_key', 'OSCOM')
                 ]);
             }
