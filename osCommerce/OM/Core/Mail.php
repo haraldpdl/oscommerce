@@ -14,11 +14,19 @@ class Mail
 {
     protected $phpmailer;
 
-    public function __construct(string $to_email_address = null, string $to = null, string $from_email_address = null, string $from = null, string $subject = null)
+    public function __construct(string $to_email_address = null, string $to = null, string $from_email_address = null, string $from = null, string $subject = null, bool $auto_smtp_config = true)
     {
         $this->phpmailer = new PHPMailer();
         $this->phpmailer->CharSet = PHPMailer::CHARSET_UTF8;
         $this->phpmailer->XMailer = 'osCommerce';
+
+        if ($auto_smtp_config === true) {
+            $smtp_host = OSCOM::getConfig('smtp_host', 'OSCOM');
+
+            if (!empty($smtp_host)) {
+                $this->setSmtp($smtp_host, OSCOM::getConfig('smtp_port', 'OSCOM'), OSCOM::getConfig('smtp_secure_protocol', 'OSCOM'), OSCOM::getConfig('smtp_username', 'OSCOM'), OSCOM::getConfig('smtp_password', 'OSCOM'));
+            }
+        }
 
         if (!empty($to_email_address)) {
             $this->phpmailer->addAddress($to_email_address, $to);
@@ -140,6 +148,25 @@ class Mail
     public function send()
     {
         return $this->phpmailer->send();
+    }
+
+    public function setSmtp(string $host, int $port, string $secure_protocol = null, string $username = null, string $password = null)
+    {
+        if (!empty($host)) {
+            $this->phpmailer->IsSMTP();
+            $this->phpmailer->Host = $host;
+            $this->phpmailer->Port = $port;
+
+            if (!empty($username)) {
+                $this->phpmailer->SMTPAuth = true;
+                $this->phpmailer->Username = $username;
+                $this->phpmailer->Password = $password;
+            }
+
+            if (!empty($secure_protocol)) {
+                $this->phpmailer->SMTPSecure = $secure_protocol;
+            }
+        }
     }
 
     public function getMailer()
