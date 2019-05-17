@@ -86,6 +86,12 @@ class HttpRequest
                 $result = json_decode($result, true);
             }
         } catch (\Exception $e) {
+            trigger_error(json_encode([
+                'method' => $data['method'],
+                'url' => $data['url'],
+                'options' => $options
+            ], \JSON_PRETTY_PRINT));
+
             trigger_error($e->getMessage());
         }
 
