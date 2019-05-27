@@ -18,18 +18,34 @@ class Download implements \osCommerce\OM\Core\RunScriptInterface
 {
     public static function execute()
     {
-        $pem_contents = HttpRequest::getResponse([
-            'url' => 'https://curl.haxx.se/ca/cacert.pem'
+        $pem_sha256_contents = HttpRequest::getResponse([
+            'url' => 'https://curl.haxx.se/ca/cacert.pem.sha256'
         ]);
 
-        if ((mb_strlen($pem_contents) > 1000) && (mb_strpos(mb_substr($pem_contents, 0, 1000), 'Certificate data from Mozilla as of') !== false)) {
-            if (!is_file(OSCOM::BASE_DIRECTORY . 'External/cacert.pem') || (sha1_file(OSCOM::BASE_DIRECTORY . 'External/cacert.pem') !== sha1($pem_contents))) {
-                if (file_put_contents(OSCOM::BASE_DIRECTORY . 'External/cacert.pem', $pem_contents, LOCK_EX) !== false) {
-                    RunScript::error('Updated Mozilla Certificate Data: ' . OSCOM::BASE_DIRECTORY . 'External/cacert.pem');
+        if (!empty($pem_sha256_contents)) {
+            $pem_sha256 = explode(' ', $pem_sha256_contents, 2);
+
+            if (!is_file(OSCOM::BASE_DIRECTORY . 'External/cacert.pem') || (hash('sha256', file_get_contents(OSCOM::BASE_DIRECTORY . 'External/cacert.pem')) !== $pem_sha256[0])) {
+                $pem_contents = HttpRequest::getResponse([
+                    'url' => 'https://curl.haxx.se/ca/cacert.pem'
+                ]);
+
+                if (!empty($pem_contents)) {
+                    if (hash('sha256', $pem_contents) === $pem_sha256[0]) {
+                        if (file_put_contents(OSCOM::BASE_DIRECTORY . 'External/cacert.pem', $pem_contents, LOCK_EX) !== false) {
+                            RunScript::error('(CACert::Download) Successfully updated CA Certificate Bundle: ' . OSCOM::BASE_DIRECTORY . 'External/cacert.pem');
+                        } else {
+                            RunScript::error('(CACert::Download) Could not save updated CA Certificate Bundle: ' . OSCOM::BASE_DIRECTORY . 'External/cacert.pem');
+                        }
+                    } else {
+                        RunScript::error('(CACert::Download) Downloaded cacert bundle does not match downloaded sha256 checksum');
+                    }
                 } else {
-                    RunScript::error('Could not update Mozilla Certificate Data: ' . OSCOM::BASE_DIRECTORY . 'External/cacert.pem');
+                    RunScript::error('(CACert::Download) Could not download cacert bundle');
                 }
             }
+        } else {
+            RunScript::error('(CACert::Download) Could not download cacert bundle sha256 checksum');
         }
     }
 }
