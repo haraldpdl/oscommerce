@@ -8,6 +8,7 @@
 
 use osCommerce\OM\Core\{
     OSCOM,
+    Registry,
     RunScript
 };
 
@@ -21,4 +22,4 @@ if ((PHP_SAPI === 'cli') || (isset($_GET['RunScript']) && !empty($_GET['RunScrip
 
 OSCOM::initialize();
 
-echo $OSCOM_Template->getContent();
+echo Registry::get('Template')->getContent();
