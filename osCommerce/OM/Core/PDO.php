@@ -56,6 +56,12 @@ class PDO
             $driver = OSCOM::getConfig('db_driver');
         }
 
+        if (!isset($driver_options[\PDO::ATTR_PERSISTENT]) && OSCOM::configExists('db_server_persistent_connections')) {
+            if (OSCOM::getConfig('db_server_persistent_connections') === 'true') {
+                $driver_options[\PDO::ATTR_PERSISTENT] = true;
+            }
+        }
+
         if (!isset($driver_options[\PDO::ATTR_ERRMODE])) {
             $driver_options[\PDO::ATTR_ERRMODE] = \PDO::ERRMODE_EXCEPTION;
         }
