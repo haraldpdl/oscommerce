@@ -2,46 +2,40 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2014 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  namespace osCommerce\OM\Core;
+namespace osCommerce\OM\Core;
 
-  use osCommerce\OM\Core\OSCOM;
+class Session
+{
+    protected static $driver;
+    private static $default_driver = 'File';
 
-/**
- * The Session class initializes the session storage handler
- */
+    public static function load(string $name = null)
+    {
+        if (!isset(static::$driver)) {
+            static::$driver = OSCOM::configExists('store_sessions') ? OSCOM::getConfig('store_sessions') : static::$default_driver;
+        }
 
-  class Session {
+        if (!class_exists(__NAMESPACE__ . '\\Session\\' . static::$driver)) {
+            trigger_error('OSCOM\Session::load(): Driver "' . static::$driver . '" does not exist, using default "' . static::$default_driver . '"', E_USER_ERROR);
 
-/**
- * Loads the session storage handler
- *
- * @param string $name The name of the session
- * @access public
- */
+            static::$driver = static::$default_driver;
+        }
 
-    public static function load($name = null) {
-      $class_name = 'osCommerce\\OM\\Core\\Session\\' . OSCOM::getConfig('store_sessions');
+        $class_name = __NAMESPACE__ . '\\Session\\' . static::$driver;
 
-      if ( !class_exists($class_name) ) {
-        trigger_error('Session Handler \'' . $class_name . '\' does not exist, using default \'osCommerce\\OM\\Core\\Session\\File\'', E_USER_ERROR);
+        $obj = new $class_name();
 
-        $class_name = 'osCommerce\\OM\\Core\\Session\\File';
-      }
+        if (!isset($name)) {
+            $name = 'sid';
+        }
 
-      $obj = new $class_name();
+        $obj->setName($name);
+        $obj->setLifeTime(ini_get('session.gc_maxlifetime'));
 
-      if ( !isset($name) ) {
-        $name = 'sid';
-      }
-
-      $obj->setName($name);
-      $obj->setLifeTime(ini_get('session.gc_maxlifetime'));
-
-      return $obj;
+        return $obj;
     }
-  }
-?>
+}
