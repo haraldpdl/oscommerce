@@ -2,16 +2,13 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2016 osCommerce; https://www.oscommerce.com
- * @license BSD; https://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core\Template\Tag;
 
-use osCommerce\OM\Core\{
-    OSCOM,
-    Registry
-};
+use osCommerce\OM\Core\Registry;
 
 class raw extends \osCommerce\OM\Core\Template\TagAbstract
 {
@@ -30,7 +27,7 @@ class raw extends \osCommerce\OM\Core\Template\TagAbstract
                 $result = $OSCOM_Template->getValue($string);
             }
         } else {
-            list($array, $key) = explode(' ', $string, 2);
+            [$array, $key] = explode(' ', $string, 2);
 
             if ($OSCOM_Template->valueExists($array)) {
                 $value = $OSCOM_Template->getValue($array);
