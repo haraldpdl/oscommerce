@@ -68,6 +68,7 @@ class ifop extends \osCommerce\OM\Core\Template\TagAbstract
 
         switch ($op) {
             case '==':
+            case 'eq':
                 if ($value == $check_against) {
                     $pass = true;
                 }
@@ -75,6 +76,7 @@ class ifop extends \osCommerce\OM\Core\Template\TagAbstract
                 break;
 
             case '!=':
+            case 'neq':
                 if ($value != $check_against) {
                     $pass = true;
                 }
@@ -82,6 +84,7 @@ class ifop extends \osCommerce\OM\Core\Template\TagAbstract
                 break;
 
             case '<':
+            case 'lt':
                 if ($value < $check_against) {
                     $pass = true;
                 }
@@ -89,6 +92,7 @@ class ifop extends \osCommerce\OM\Core\Template\TagAbstract
                 break;
 
             case '<=':
+            case 'lte':
                 if ($value <= $check_against) {
                     $pass = true;
                 }
@@ -96,6 +100,7 @@ class ifop extends \osCommerce\OM\Core\Template\TagAbstract
                 break;
 
             case '>':
+            case 'gt':
                 if ($value > $check_against) {
                     $pass = true;
                 }
@@ -103,6 +108,7 @@ class ifop extends \osCommerce\OM\Core\Template\TagAbstract
                 break;
 
             case '>=':
+            case 'gte':
                 if ($value >= $check_against) {
                     $pass = true;
                 }
