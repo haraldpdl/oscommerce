@@ -26,8 +26,10 @@ class OSCOM
     {
         static::setSite($site);
 
-        if (!static::siteExists(static::getSite())) {
-            trigger_error('Site \'' . static::getSite() . '\' does not exist', E_USER_ERROR);
+        $site = static::getSite();
+
+        if (!isset($site) || !static::siteExists($site)) {
+            trigger_error('OSCOM\OSCOM::initialize(): Site "' . $site . '" does not exist', E_USER_ERROR);
             exit;
         }
 
@@ -35,7 +37,14 @@ class OSCOM
 
         static::setSiteApplication();
 
-        call_user_func(['osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Controller', 'initialize']);
+        $callable = [
+            'osCommerce\\OM\\Core\\Site\\' . $site . '\\Controller',
+            'initialize'
+        ];
+
+        if (is_callable($callable)) {
+            call_user_func($callable);
+        }
     }
 
     public static function siteExists(string $site): bool
@@ -47,21 +56,26 @@ class OSCOM
     {
         if (isset($site)) {
             if (!static::siteExists($site)) {
-                trigger_error('Site \'' . $site . '\' does not exist, using \'' . (static::$site ?? static::getDefaultSite()) . '\'', E_USER_ERROR);
+                trigger_error('OSCOM\OSCOM::setSite(): Site "' . $site . '" does not exist, using "' . (static::$site ?? static::getDefaultSite()) . '"', E_USER_ERROR);
 
                 unset($site);
             }
         } else {
-            if (!empty($_GET)) {
-                $requested_site = HTML::sanitize(basename(key(array_slice($_GET, 0, 1, true))));
+            if (!empty($_GET) && (($key = array_key_first($_GET)) !== null)) {
+                $requested_site = HTML::sanitize(basename($key));
 
-                if (preg_match('/^[A-Z][A-Za-z0-9-_]*$/', $requested_site) && static::siteExists($requested_site)) {
+                if ((preg_match('/^[A-Z][A-Za-z0-9-_]*$/', $requested_site) === 1) && static::siteExists($requested_site)) {
                     $site = $requested_site;
                 }
             }
         }
 
         static::$site = $site ?? static::$site ?? static::getDefaultSite();
+    }
+
+    public static function hasSite(): bool
+    {
+        return isset(static::$site);
     }
 
     public static function getSite(): ?string
@@ -143,14 +157,22 @@ class OSCOM
             }
         } else {
             if (!empty($_GET)) {
-                $requested_application = HTML::sanitize(basename(key(array_slice($_GET, 0, 1, true))));
+                $key = key(array_slice($_GET, 0, 1, true));
 
-                if ($requested_application == static::getSite()) {
-                    $requested_application = HTML::sanitize(basename(key(array_slice($_GET, 1, 1, true))));
-                }
+                if (isset($key)) {
+                    $requested_application = HTML::sanitize(basename($key));
 
-                if (preg_match('/^[A-Za-z0-9-_]+$/', $requested_application) && static::siteApplicationExists($requested_application)) {
-                    $application = $requested_application;
+                    if ($requested_application == static::getSite()) {
+                        $key = key(array_slice($_GET, 1, 1, true));
+
+                        if (isset($key)) {
+                            $requested_application = HTML::sanitize(basename($key));
+                        }
+                    }
+
+                    if ((preg_match('/^[A-Za-z0-9-_]+$/', $requested_application) === 1) && static::siteApplicationExists($requested_application)) {
+                        $application = $requested_application;
+                    }
                 }
             }
         }
@@ -167,9 +189,18 @@ class OSCOM
         return static::$application;
     }
 
-    public static function getDefaultSiteApplication(): string
+    public static function getDefaultSiteApplication(): ?string
     {
-        return call_user_func(['osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Controller', 'getDefaultApplication']);
+        $callable = [
+            'osCommerce\\OM\\Core\\Site\\' . static::getSite() . '\\Controller',
+            'getDefaultApplication'
+        ];
+
+        if (is_callable($callable)) {
+            return call_user_func($callable);
+        }
+
+        return null;
     }
 
     public static function setIsRPC()
@@ -200,7 +231,9 @@ class OSCOM
             if (is_file($file)) {
                 $ini = parse_ini_file($file);
 
-                static::$config[$site] = array_merge(static::$config[$site] ?? [], $ini);
+                if (is_array($ini)) {
+                    static::$config[$site] = array_merge(static::$config[$site] ?? [], $ini);
+                }
             }
 
             $local_file = dirname($file) . '/local.ini';
@@ -208,7 +241,9 @@ class OSCOM
             if (is_file($local_file)) {
                 $local = parse_ini_file($local_file);
 
-                static::$config[$site] = array_merge(static::$config[$site] ?? [], $local);
+                if (is_array($local)) {
+                    static::$config[$site] = array_merge(static::$config[$site] ?? [], $local);
+                }
             }
 
             if (mb_strpos($file, '/Core/Site/') !== false) {
@@ -282,43 +317,51 @@ class OSCOM
         static::$config[$group][$key] = $value;
     }
 
-    public static function getVersion(string $site = 'OSCOM'): ?string
+    public static function getVersion(?string $site = 'OSCOM'): ?string
     {
-        if (!isset(static::$version[$site])) {
-            if ($site == 'OSCOM') {
-                $file = static::BASE_DIRECTORY . 'version.txt';
-            } else {
-                if (!static::siteExists($site)) {
-                    trigger_error('OSCOM::getVersion(): Site "' . $site . '" does not exist.');
-
-                    return null;
-                }
-
-                $file = static::BASE_DIRECTORY . 'Custom/Site/' . $site . '/version.txt';
-
-                if (!file_exists($file)) {
-                    $file = static::BASE_DIRECTORY . 'Core/Site/' . $site . '/version.txt';
-                }
+        try {
+            if (is_null($site)) {
+                throw new \Exception('OSCOM\OSCOM::getVersion(): Site is not defined');
             }
 
-            if (!file_exists($file)) {
-                trigger_error('OSCOM::getVersion(): Version file does not exist: ' . $file);
+            if (!isset(static::$version[$site])) {
+                if ($site == 'OSCOM') {
+                    $file = static::BASE_DIRECTORY . 'version.txt';
+                } else {
+                    if (!static::siteExists($site)) {
+                        throw new \Exception('OSCOM\OSCOM::getVersion(): Site "' . $site . '" does not exist');
+                    }
 
-                return null;
-            }
+                    $file = static::BASE_DIRECTORY . 'Custom/Site/' . $site . '/version.txt';
 
-            $v = trim(file_get_contents($file));
+                    if (!is_file($file)) {
+                        $file = static::BASE_DIRECTORY . 'Core/Site/' . $site . '/version.txt';
+                    }
+                }
 
-            if (preg_match('/^(\d+\.)?(\d+\.)?(\d+)$/', $v)) {
+                if (!is_file($file)) {
+                    throw new \Exception('OSCOM\OSCOM::getVersion(): Version file does not exist: ' . $file);
+                }
+
+                $contents = file_get_contents($file);
+
+                if ($contents === false) {
+                    throw new \Exception('OSCOM\OSCOM::getVersion(): Cannot read version file: ' . $file);
+                }
+
+                $v = trim($contents);
+
+                if (preg_match('/^(\d+\.)?(\d+\.)?(\d+)$/', $v) !== 1) {
+                    throw new \Exception('OSCOM\OSCOM::getVersion(): Version number is not numeric. Please verify: ' . $file);
+                }
+
                 static::$version[$site] = $v;
-            } else {
-                trigger_error('Version number is not numeric. Please verify: ' . $file);
-
-                return null;
             }
+        } catch (\Exception $e) {
+            trigger_error($e->getMessage());
         }
 
-        return static::$version[$site];
+        return static::$version[$site] ?? null;
     }
 
     protected static function setRequestType()
@@ -426,7 +469,7 @@ class OSCOM
         }
 
         if (($add_session_id === true) && Registry::exists('Session') && Registry::get('Session')->hasStarted() && ((bool)ini_get('session.use_only_cookies') === false)) {
-            if (strlen(SID) > 0) {
+            if (defined('SID') && (strlen(SID) > 0)) {
                 $_sid = SID;
             } elseif (((static::getRequestType() == 'NONSSL') && ($connection == 'SSL') && (static::getConfig('enable_ssl', $site) == 'true')) || ((static::getRequestType() == 'SSL') && ($connection != 'SSL'))) {
                 if (static::getConfig('http_cookie_domain', $site) != static::getConfig('https_cookie_domain', $site)) {
@@ -590,7 +633,14 @@ class OSCOM
             }
         }
 
-        return call_user_func([$ns . '\\SQL\\' . $db_driver . '\\' . $procedure, 'execute'], $data);
+        $callable = [
+            $ns . '\\SQL\\' . $db_driver . '\\' . $procedure,
+            'execute'
+        ];
+
+        if (is_callable($callable)) {
+            return call_user_func($callable, $data);
+        }
     }
 
 /**
@@ -617,7 +667,7 @@ class OSCOM
             $domain = (static::getRequestType() == 'NONSSL') ? static::getConfig('http_cookie_domain') : static::getConfig('https_cookie_domain');
         }
 
-        return setcookie($name, $value, $expires, $path, $domain, $secure, $httpOnly);
+        return setcookie($name, $value ?? '', $expires, $path, $domain, $secure, $httpOnly);
     }
 
 /**

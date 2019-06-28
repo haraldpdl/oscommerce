@@ -2,8 +2,8 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright (c) 2016 osCommerce; http://www.oscommerce.com
- * @license BSD; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
 namespace osCommerce\OM\Core;
@@ -70,7 +70,16 @@ abstract class ApplicationAbstract
             $run[] = $action;
 
             if ($this->siteApplicationActionExists(implode('\\', $run))) {
-                call_user_func(array('osCommerce\\OM\\Core\\Site\\' . OSCOM::getSite() . '\\Application\\' . OSCOM::getSiteApplication() . '\\Action\\' . implode('\\', $run), 'execute'), $this);
+                $callable = [
+                    'osCommerce\\OM\\Core\\Site\\' . OSCOM::getSite() . '\\Application\\' . OSCOM::getSiteApplication() . '\\Action\\' . implode('\\', $run),
+                    'execute'
+                ];
+
+                if (is_callable($callable)) {
+                    call_user_func($callable, $this);
+                } else {
+                    break;
+                }
             } else {
                 break;
             }
@@ -82,7 +91,16 @@ abstract class ApplicationAbstract
         foreach ($this->getRequestedActions() as $action) {
             $this->_actions_run[] = $action;
 
-            call_user_func(array('osCommerce\\OM\\Core\\Site\\' . OSCOM::getSite() . '\\Application\\' . OSCOM::getSiteApplication() . '\\Action\\' . implode('\\', $this->_actions_run), 'execute'), $this);
+            $callable = [
+                'osCommerce\\OM\\Core\\Site\\' . OSCOM::getSite() . '\\Application\\' . OSCOM::getSiteApplication() . '\\Action\\' . implode('\\', $this->_actions_run),
+                'execute'
+            ];
+
+            if (is_callable($callable)) {
+                call_user_func($callable, $this);
+            } else {
+                break;
+            }
         }
     }
 

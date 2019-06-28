@@ -16,6 +16,10 @@ use osCommerce\OM\Core\{
 
 error_reporting(E_ALL);
 
+if (!defined('OSCOM\\PUBLIC_BASE_DIRECTORY')) {
+    define('OSCOM\\PUBLIC_BASE_DIRECTORY', realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR);
+}
+
 define('OSCOM\\BASE_DIRECTORY', __DIR__ . DIRECTORY_SEPARATOR);
 
 mb_internal_encoding('UTF-8');

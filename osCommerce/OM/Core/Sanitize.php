@@ -10,7 +10,7 @@ namespace osCommerce\OM\Core;
 
 class Sanitize
 {
-    public static function simple(string $value = null): string
+    public static function simple(?string $value): string
     {
         if (!isset($value)) {
             return '';
@@ -24,10 +24,10 @@ class Sanitize
             '',
             ' ',
             '_'
-        ], trim($value));
+        ], trim($value)) ?? '';
     }
 
-    public static function para(string $value = null): string
+    public static function para(?string $value): string
     {
         if (!isset($value)) {
             return '';
@@ -41,15 +41,15 @@ class Sanitize
             "\n\n",
             ' ',
             '_'
-        ], trim($value));
+        ], trim($value)) ?? '';
     }
 
-    public static function password(string $value = null): string
+    public static function password(?string $value): string
     {
         if (!isset($value)) {
             return '';
         }
 
-        return preg_replace('/\R/', '', $value);
+        return preg_replace('/\R/', '', $value) ?? '';
     }
 }

@@ -188,6 +188,10 @@ class ErrorHandler
 
     public static function import(string $filename)
     {
+        if (!is_file($filename)) {
+            return false;
+        }
+
         if (!is_resource(static::$dbh) && !static::connect()) {
             return false;
         }
@@ -197,29 +201,31 @@ class ErrorHandler
 
         $messages = [];
 
-        foreach ($error_log as $error) {
-            $error = Language::toUTF8(trim($error));
+        if (is_array($error_log)) {
+            foreach ($error_log as $error) {
+                $error = Language::toUTF8(trim($error));
 
-            if (preg_match('/^\[([0-9]{2}-[A-Za-z]{3}-[0-9]{4} [0-9]{2}:[0-5][0-9]:[0-5][0-9].*?)\] (.*)$/', $error, $matches)) {
-                if (mb_strlen($matches[1]) == 20) {
-                    $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s');
-                } else { // with timezone
-                    $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s e');
+                if (preg_match('/^\[([0-9]{2}-[A-Za-z]{3}-[0-9]{4} [0-9]{2}:[0-5][0-9]:[0-5][0-9].*?)\] (.*)$/', $error, $matches)) {
+                    if (mb_strlen($matches[1]) == 20) {
+                        $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s');
+                    } else { // with timezone
+                        $timestamp = DateTime::getTimestamp($matches[1], 'd-M-Y H:i:s e');
+                    }
+
+                    $message = $matches[2];
+
+                    $messages[] = [
+                        'timestamp' => $timestamp,
+                        'message' => $message
+                    ];
+                } elseif (!empty($messages)) {
+                    $messages[(count($messages)-1)]['message'] .= "\n" . $error;
+                } else {
+                    $messages[] = [
+                        'timestamp' => time(),
+                        'message' => $error
+                    ];
                 }
-
-                $message = $matches[2];
-
-                $messages[] = [
-                    'timestamp' => $timestamp,
-                    'message' => $message
-                ];
-            } elseif (!empty($messages)) {
-                $messages[(count($messages)-1)]['message'] .= "\n" . $error;
-            } else {
-                $messages[] = [
-                    'timestamp' => time(),
-                    'message' => $error
-                ];
             }
         }
 
@@ -272,9 +278,7 @@ class ErrorHandler
 
     public static function getErrorPageContents(string $page = 'general'): ?string
     {
-        if (isset($page)) {
-            $page = basename($page);
-        }
+        $page = basename($page);
 
         $site = OSCOM::getSite();
         $content = null;

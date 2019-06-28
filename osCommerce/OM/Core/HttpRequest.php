@@ -58,7 +58,7 @@ class HttpRequest
             $options['json'] = $data['parameters'];
         } else {
             if (($data['method'] === 'post') && !empty($data['parameters'])) {
-                if (!isset($options['headers']['Content-Type'])) {
+                if (!isset($options['headers']) || !isset($options['headers']['Content-Type'])) {
                     $options['headers']['Content-Type'] = 'application/x-www-form-urlencoded';
                 }
 
@@ -86,11 +86,15 @@ class HttpRequest
                 $result = json_decode($result, true);
             }
         } catch (\Exception $e) {
-            trigger_error(json_encode([
+            $json = json_encode([
                 'method' => $data['method'],
                 'url' => $data['url'],
                 'options' => $options
-            ], \JSON_PRETTY_PRINT));
+            ], \JSON_PRETTY_PRINT);
+
+            if ($json !== false) {
+                trigger_error($json);
+            }
 
             trigger_error($e->getMessage());
         }

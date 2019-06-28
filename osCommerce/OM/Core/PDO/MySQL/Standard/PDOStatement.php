@@ -22,7 +22,13 @@ class PDOStatement extends \osCommerce\OM\Core\PDOStatement
     public function execute($input_parameters = null): bool
     {
         try {
-            $query_action = mb_strtolower(mb_substr($this->queryString, 0, mb_strpos($this->queryString, ' ')));
+            $pos = mb_strpos($this->queryString, ' ');
+
+            if ($pos === false) {
+                throw new \Exception('Invalid query');
+            }
+
+            $query_action = mb_strtolower(mb_substr($this->queryString, 0, $pos));
 
             $db_table_prefix = OSCOM::getConfig('db_table_prefix');
 
@@ -149,12 +155,12 @@ class PDOStatement extends \osCommerce\OM\Core\PDOStatement
             if ($this->pdo->inTransaction()) {
                 $this->pdo->commit();
             }
-        } catch (\PDOException $e) {
+        } catch (\PDOException | \Exception $e) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
 
-            trigger_error($e->getMessage());
+            trigger_error('OSCOM\PDO\MySQL\Standard\PDOStatement::execute(): ' . $e->getMessage());
 
             $result = false;
         }

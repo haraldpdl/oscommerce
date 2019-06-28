@@ -2,17 +2,20 @@
 /**
  * osCommerce Online Merchant
  *
- * @copyright Copyright (c) 2012 osCommerce; http://www.oscommerce.com
- * @license BSD License; http://www.oscommerce.com/bsdlicense.txt
+ * @copyright (c) 2019 osCommerce; https://www.oscommerce.com
+ * @license MIT; https://www.oscommerce.com/license/mit.txt
  */
 
-  namespace osCommerce\OM\Core;
+namespace osCommerce\OM\Core;
 
-  use osCommerce\OM\Core\DateTime;
-  use osCommerce\OM\Core\OSCOM;
-  use osCommerce\OM\Core\Registry;
+use osCommerce\OM\Core\{
+    DateTime,
+    OSCOM,
+    Registry
+};
 
-  class HTML {
+class HTML
+{
 
 /**
  * Parse a user submited value
@@ -23,12 +26,19 @@
  * @since v3.0.0
  */
 
-    public static function output($string, $translate = null) {
-      if ( !isset($translate) ) {
-        $translate = array('"' => '&quot;');
-      }
+    public static function output(?string $string, array $translate = null): string
+    {
+        if (is_null($string) || empty($string)) {
+            return '';
+        }
 
-      return strtr(trim($string), $translate);
+        if (!isset($translate)) {
+            $translate = [
+                '"' => '&quot;'
+            ];
+        }
+
+        return strtr(trim($string), $translate);
     }
 
 /**
@@ -39,8 +49,13 @@
  * @since v3.0.0
  */
 
-    public static function outputProtected($string) {
-      return htmlspecialchars(trim($string));
+    public static function outputProtected(?string $string): string
+    {
+        if (is_null($string) || empty($string)) {
+            return '';
+        }
+
+        return htmlspecialchars(trim($string));
     }
 
 /**
@@ -51,11 +66,23 @@
  * @since v3.0.0
  */
 
-    public static function sanitize($string) {
-      $patterns = array ('/ +/', '/[<>]/');
-      $replace = array (' ', '_');
+    public static function sanitize(?string $string): string
+    {
+        if (is_null($string) || empty($string)) {
+            return '';
+        }
 
-      return preg_replace($patterns, $replace, trim($string));
+        $patterns = [
+            '/ +/',
+            '/[<>]/'
+        ];
+
+        $replace = [
+            ' ',
+            '_'
+        ];
+
+        return preg_replace($patterns, $replace, trim($string)) ?? '';
     }
 
 /**
@@ -68,8 +95,9 @@
  * @since v3.0.0
  */
 
-    public static function link($url, $element, $parameters = null) {
-      return '<a href="' . $url . '"' . (!empty($parameters) ? ' ' . $parameters : '') . '>' . $element . '</a>';
+    public static function link(string $url, string $element, ?string $parameters = null): string
+    {
+        return '<a href="' . $url . '"' . (!empty($parameters) ? ' ' . $parameters : '') . '>' . $element . '</a>';
     }
 
 /**

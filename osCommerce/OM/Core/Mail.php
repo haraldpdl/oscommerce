@@ -29,11 +29,11 @@ class Mail
         }
 
         if (!empty($to_email_address)) {
-            $this->phpmailer->addAddress($to_email_address, $to);
+            $this->phpmailer->addAddress($to_email_address, $to ?? '');
         }
 
         if (!empty($from_email_address)) {
-            $this->phpmailer->setFrom($from_email_address, $from);
+            $this->phpmailer->setFrom($from_email_address, $from ?? '');
         }
 
         if (!empty($subject)) {

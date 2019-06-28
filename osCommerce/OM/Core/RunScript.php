@@ -105,14 +105,20 @@ class RunScript {
                 throw new RunScriptException('Script class does not implement osCommerce\\OM\\Core\\RunScriptInterface: ' . $script_class);
             }
 
+            $callable = [
+                $script_class,
+                'execute'
+            ];
+
+            if (!is_callable($callable)) {
+                throw new RunScriptException('Cannot call script execute method: ' . $script_class);
+            }
+
             static::$is_running = true;
 
             OSCOM::setSite();
 
-            call_user_func([
-                $script_class,
-                'execute'
-            ]);
+            call_user_func($callable);
         } catch (RunScriptException | \Exception $e) {
             static::error($e->getMessage());
         }

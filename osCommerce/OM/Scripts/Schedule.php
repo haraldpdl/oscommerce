@@ -45,6 +45,15 @@ class Schedule implements \osCommerce\OM\Core\RunScriptInterface
                 throw new \Exception('Task class (' . $task . ') does not implement osCommerce\\OM\\Core\\RunScriptInterface');
             }
 
+            $callable = [
+                $task,
+                'execute'
+            ];
+
+            if (!is_callable($callable)) {
+                throw new \Exception('Cannot execute task class (' . $task . ')');
+            }
+
             define('OSCOM\\SCRIPT_SCHEDULE_TASK_LOCKFILE', OSCOM::BASE_DIRECTORY . 'Work/Temp/schedule-' . sha1($task) . '.lockfile');
 
             if (is_file(\OSCOM\SCRIPT_SCHEDULE_TASK_LOCKFILE)) {
@@ -57,10 +66,7 @@ class Schedule implements \osCommerce\OM\Core\RunScriptInterface
 
             set_time_limit(0);
 
-            call_user_func([
-                $task,
-                'execute'
-            ]);
+            call_user_func($callable);
 
             unlink(\OSCOM\SCRIPT_SCHEDULE_TASK_LOCKFILE);
         } catch (\Exception $e) {
@@ -105,53 +111,55 @@ class Schedule implements \osCommerce\OM\Core\RunScriptInterface
                 if (is_file($schedule_file)) {
                     $jobs = file($schedule_file);
 
-                    foreach ($jobs as $job) {
-                        try {
-                            $job = trim($job);
+                    if ($jobs !== false) {
+                        foreach ($jobs as $job) {
+                            try {
+                                $job = trim($job);
 
-                            if (!empty($job)) {
-                                if (mb_strpos($job, ';') !== false) {
-                                    [$schedule, $command] = explode(';', $job, 2);
+                                if (!empty($job)) {
+                                    if (mb_strpos($job, ';') !== false) {
+                                        [$schedule, $command] = explode(';', $job, 2);
 
-                                    $schedule = trim($schedule);
-                                    $command = trim($command);
+                                        $schedule = trim($schedule);
+                                        $command = trim($command);
 
-                                    foreach (explode('\\', $command) as $c) {
-                                        if (!OSCOM::isValidClassName($c)) {
-                                            throw new \Exception('Invalid class name (' . $command . ') in: ' . $schedule_file);
-                                        }
-                                    }
-
-                                    $command_class = 'osCommerce\\OM\\' . $namespace . '\\' . $script['name'] . '\\' . $command;
-
-                                    // custom classes are automatically executed so skip to avoid duplicates when $base_dir is 'Custom'
-                                    if (in_array($command_class, $tasks)) {
-                                        continue;
-                                    }
-
-                                    if (\Cron\CronExpression::isValidExpression($schedule)) {
-                                        $cron = \Cron\CronExpression::factory($schedule);
-
-                                        if ($cron->isDue()) {
-                                            if (class_exists($command_class)) {
-                                                if (is_subclass_of($command_class, 'osCommerce\\OM\\Core\\RunScriptInterface')) {
-                                                    $tasks[] = $command_class;
-                                                } else {
-                                                    throw new \Exception('Task class (' . $job . ') does not implement osCommerce\\OM\\Core\\RunScriptInterface in: ' . $schedule_file);
-                                                }
-                                            } else {
-                                                throw new \Exception('Task class file not found (' . $job . ') in: ' . $schedule_file);
+                                        foreach (explode('\\', $command) as $c) {
+                                            if (!OSCOM::isValidClassName($c)) {
+                                                throw new \Exception('Invalid class name (' . $command . ') in: ' . $schedule_file);
                                             }
                                         }
+
+                                        $command_class = 'osCommerce\\OM\\' . $namespace . '\\' . $script['name'] . '\\' . $command;
+
+                                        // custom classes are automatically executed so skip to avoid duplicates when $base_dir is 'Custom'
+                                        if (in_array($command_class, $tasks)) {
+                                            continue;
+                                        }
+
+                                        if (\Cron\CronExpression::isValidExpression($schedule)) {
+                                            $cron = \Cron\CronExpression::factory($schedule);
+
+                                            if ($cron->isDue()) {
+                                                if (class_exists($command_class)) {
+                                                    if (is_subclass_of($command_class, 'osCommerce\\OM\\Core\\RunScriptInterface')) {
+                                                        $tasks[] = $command_class;
+                                                    } else {
+                                                        throw new \Exception('Task class (' . $job . ') does not implement osCommerce\\OM\\Core\\RunScriptInterface in: ' . $schedule_file);
+                                                    }
+                                                } else {
+                                                    throw new \Exception('Task class file not found (' . $job . ') in: ' . $schedule_file);
+                                                }
+                                            }
+                                        } else {
+                                            throw new \Exception('Invalid schedule expression (' . $job . ') in: ' . $schedule_file);
+                                        }
                                     } else {
-                                        throw new \Exception('Invalid schedule expression (' . $job . ') in: ' . $schedule_file);
+                                        throw new \Exception('Invalid script schedule file: ' . $schedule_file);
                                     }
-                                } else {
-                                    throw new \Exception('Invalid script schedule file: ' . $schedule_file);
                                 }
+                            } catch (\Exception $e) {
+                                RunScript::error('(Schedule::runTasks) ' . $e->getMessage());
                             }
-                        } catch (\Exception $e) {
-                            RunScript::error('(Schedule::runTasks) ' . $e->getMessage());
                         }
                     }
                 }

@@ -15,10 +15,31 @@ use osCommerce\OM\Core\{
 
 class Hash
 {
-    public static function get(string $string, string $driver = null): string
+    /**
+     * @return string|bool
+     */
+
+    public static function get(string $string, string $driver = null)
     {
         if (isset($driver)) {
-            return call_user_func(['osCommerce\\OM\\Core\\Hash\\' . $driver, 'get'], $string);
+            try {
+                if (!is_subclass_of('osCommerce\\OM\\Core\\Hash\\' . $driver, 'osCommerce\\OM\\Core\\HashInterface')) {
+                    throw new \Exception('OSCOM\Hash::get(): Driver "' . $driver . '" does not implement osCommerce\\OM\\Core\\HashInterface');
+                }
+
+                $callable = [
+                    'osCommerce\\OM\\Core\\Hash\\' . $driver,
+                    'get'
+                ];
+
+                if (is_callable($callable)) {
+                    return call_user_func($callable, $string);
+                }
+            } catch (\Exception $e) {
+                trigger_error($e->getMessage());
+            }
+
+            return false;
         }
 
         return password_hash($string, PASSWORD_DEFAULT);
@@ -27,15 +48,28 @@ class Hash
     public static function validate(string $plain, string $hash, string $driver = null): bool
     {
         if (!isset($driver)) {
-            $type = static::getType($hash);
-
-            if (!is_null($type) && class_exists('osCommerce\\OM\\Core\\Hash\\' . $type)) {
-                $driver = $type;
-            }
+            $driver = static::getType($hash);
         }
 
         if (isset($driver)) {
-            return call_user_func(['osCommerce\\OM\\Core\\Hash\\' . $driver, 'validate'], $plain, $hash);
+            try {
+                if (!is_subclass_of('osCommerce\\OM\\Core\\Hash\\' . $driver, 'osCommerce\\OM\\Core\\HashInterface')) {
+                    throw new \Exception('OSCOM\Hash::validate(): Driver "' . $driver . '" does not implement osCommerce\\OM\\Core\\HashInterface');
+                }
+
+                $callable = [
+                    'osCommerce\\OM\\Core\\Hash\\' . $driver,
+                    'validate'
+                ];
+
+                if (is_callable($callable)) {
+                    return call_user_func($callable, $plain, $hash);
+                }
+            } catch (\Exception $e) {
+                trigger_error($e->getMessage());
+            }
+
+            return false;
         }
 
         return password_verify($plain, $hash);
@@ -68,13 +102,18 @@ class Hash
             $driver = basename($file['name'], '.php');
 
             if (is_subclass_of('osCommerce\\OM\\Core\\Hash\\' . $driver, 'osCommerce\\OM\\Core\\HashInterface')) {
-                if (call_user_func(['osCommerce\\OM\\Core\\Hash\\' . $driver, 'canValidate'], $hash)) {
-                    return $driver;
+                $callable = [
+                    'osCommerce\\OM\\Core\\Hash\\' . $driver,
+                    'canValidate'
+                ];
+
+                if (is_callable($callable)) {
+                    return call_user_func($callable, $hash);
                 }
             }
         }
 
-        trigger_error('osCommerce\\OM\\Core\\Hash::getType() hash type not found for "' . substr($hash, 0, 5) . '"');
+        trigger_error('OSCOM\Hash::getType(): Hash type not found for "' . substr($hash, 0, 5) . '"');
 
         return null;
     }
@@ -82,13 +121,13 @@ class Hash
     public static function getRandomString(int $length, string $type = 'mixed'): string
     {
         if (!in_array($type, ['mixed', 'chars', 'digits'])) {
-            trigger_error('osCommerce\\OM\\Core\\Hash::getRandomString() $type not recognized:' . $type, E_USER_ERROR);
+            trigger_error('OSCOM\Hash::getRandomString(): Type not recognized:' . $type, E_USER_ERROR);
 
             return '';
         }
 
         if ($length < 1) {
-            trigger_error('osCommerce\\OM\\Core\\Hash::getRandomString() $length must be 1 or higher value', E_USER_ERROR);
+            trigger_error('OSCOM\Hash::getRandomString(): Length must be 1 or higher value', E_USER_ERROR);
 
             return '';
         }

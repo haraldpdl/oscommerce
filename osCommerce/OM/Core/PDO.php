@@ -230,6 +230,8 @@ class PDO
             return $this->query($statement);
         }
 
+        $it_where = [];
+
         if (isset($where)) {
             $statement .= ' where ';
 
@@ -459,13 +461,13 @@ class PDO
                     }
                 }
 
-                $class = $sql_class . '\\' . (isset($driver) ? $driver . '\\' : '') . $procedure;
+                $callable = [
+                    $sql_class . '\\' . (isset($driver) ? $driver . '\\' : '') . $procedure,
+                    'execute'
+                ];
 
-                if (class_exists($class)) {
-                    return call_user_func([
-                        $class,
-                        'execute'
-                    ], $data);
+                if (is_callable($callable)) {
+                    return call_user_func($callable, $data);
                 }
             }
         }
@@ -500,10 +502,18 @@ class PDO
 
     public function importSQL(string $sql_file, string $table_prefix = null): bool
     {
-        if (file_exists($sql_file)) {
-            $import_queries = file_get_contents($sql_file);
-        } else {
-            trigger_error(sprintf(ERROR_SQL_FILE_NONEXISTENT, $sql_file));
+        try {
+            if (is_file($sql_file)) {
+                $import_queries = file_get_contents($sql_file);
+
+                if ($import_queries === false) {
+                    throw new \Exception('OSCOM\PDO::importSQL(): Cannot read SQL import file: ' . $sql_file);
+                }
+            } else {
+                throw new \Exception('OSCOM\PDO::importSQL(): SQL import file does not exist: ' . $sql_file);
+            }
+        } catch (\Exception $e) {
+            trigger_error($e->getMessage());
 
             return false;
         }
@@ -727,21 +737,34 @@ class PDO
     public function __call(string $name, array $arguments)
     {
         if (isset($this->instance)) {
-            return call_user_func_array([
+            $callable = [
                 $this->instance,
                 $name
-            ], $arguments);
+            ];
+
+            if (is_callable($callable)) {
+                return call_user_func_array($callable, $arguments);
+            }
         }
 
-        trigger_error('Call to undefined method ' . __CLASS__ . '::' . $name . '()', E_USER_ERROR);
+        trigger_error('OSCOM\PDO::__call(): Call to undefined method ' . __CLASS__ . '::' . $name . '()', E_USER_ERROR);
+
         exit;
     }
 
     public static function __callStatic(string $name, array $arguments)
     {
-        return forward_static_call_array([
+        $callable = [
             '\PDO',
             $name
-        ], $arguments);
+        ];
+
+        if (is_callable($callable)) {
+            return forward_static_call_array($callable, $arguments);
+        }
+
+        trigger_error('OSCOM\PDO::__callStatic(): Call to undefined method ' . __CLASS__ . '::' . $name . '()', E_USER_ERROR);
+
+        exit;
     }
 }
