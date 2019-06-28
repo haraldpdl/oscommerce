@@ -1,0 +1,14 @@
+parameters:
+    level: 7
+    bootstrap: %currentWorkingDirectory%/osCommerce/OM/bootstrap.php
+    paths:
+        - %currentWorkingDirectory%/osCommerce/
+    ignoreErrors:
+        - '/Call to an undefined static method osCommerce\\OM\\Core\\Is\:\:Integer\(\)/'
+        - '/Parameter \#3 \$http_response_code of function header expects int, int\|null given/'
+        - '/Call to an undefined method osCommerce\\OM\\Core\\PDO\:\:connect\(\)/'
+    excludes_analyse:
+        - %currentWorkingDirectory%/osCommerce/OM/Core/Site/
+        - %currentWorkingDirectory%/osCommerce/OM/Custom/
+        - %currentWorkingDirectory%/osCommerce/OM/External/
+        - %currentWorkingDirectory%/osCommerce/OM/Tests/
