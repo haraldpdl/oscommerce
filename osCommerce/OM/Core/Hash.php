@@ -32,9 +32,11 @@ class Hash
                     'get'
                 ];
 
-                if (is_callable($callable)) {
-                    return call_user_func($callable, $string);
+                if (!is_callable($callable)) {
+                    throw new \Exception('OSCOM\Hash::get(): Can not get hash from driver "' . $driver . '"');
                 }
+
+                return call_user_func($callable, $string);
             } catch (\Exception $e) {
                 trigger_error($e->getMessage());
             }
@@ -42,7 +44,7 @@ class Hash
             return false;
         }
 
-        return password_hash($string, PASSWORD_DEFAULT);
+        return password_hash($string, \PASSWORD_DEFAULT);
     }
 
     public static function validate(string $plain, string $hash, string $driver = null): bool
@@ -51,7 +53,7 @@ class Hash
             $driver = static::getType($hash);
         }
 
-        if (isset($driver)) {
+        if (isset($driver) && class_exists('osCommerce\\OM\\Core\\Hash\\' . $driver)) {
             try {
                 if (!is_subclass_of('osCommerce\\OM\\Core\\Hash\\' . $driver, 'osCommerce\\OM\\Core\\HashInterface')) {
                     throw new \Exception('OSCOM\Hash::validate(): Driver "' . $driver . '" does not implement osCommerce\\OM\\Core\\HashInterface');
@@ -62,9 +64,11 @@ class Hash
                     'validate'
                 ];
 
-                if (is_callable($callable)) {
-                    return call_user_func($callable, $plain, $hash);
+                if (!is_callable($callable)) {
+                    throw new \Exception('OSCOM\Hash::validate(): Can not validate hash from driver "' . $driver . '"');
                 }
+
+                return call_user_func($callable, $plain, $hash);
             } catch (\Exception $e) {
                 trigger_error($e->getMessage());
             }
@@ -107,8 +111,8 @@ class Hash
                     'canValidate'
                 ];
 
-                if (is_callable($callable)) {
-                    return call_user_func($callable, $hash);
+                if (is_callable($callable) && (call_user_func($callable, $hash) === true)) {
+                    return $driver;
                 }
             }
         }
