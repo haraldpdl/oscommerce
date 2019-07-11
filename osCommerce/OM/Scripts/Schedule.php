@@ -93,7 +93,7 @@ class Schedule implements \osCommerce\OM\Core\RunScriptInterface
             $DL->setIncludeFiles(false);
 
             foreach ($DL->getFiles() as $site) {
-                $script_dir = $DL->getDirectory() . '/' . $site['name'] . '/' . 'Scripts';
+                $script_dir = $DL->getDirectory() . '/' . $site['name'] . '/Scripts';
 
                 if (is_dir($script_dir)) {
                     $dirs[$base_dir . '/Site/' . $site['name'] . '/Scripts'] = 'Core\\Site\\' . $site['name'] . '\\Scripts';
