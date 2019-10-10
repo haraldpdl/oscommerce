@@ -21,7 +21,7 @@ class Events
     {
         if (isset($event)) {
             if (isset(static::$data[$event])) {
-                return static::$data[$event];
+                return static::$data[$event]['tasks'];
             }
 
             return [];
@@ -30,18 +30,51 @@ class Events
         return static::$data;
     }
 
-    public static function watch(string $event, $function)
+    public static function watch(string $event, $function, bool $autorun = true)
     {
-        static::$data[$event][] = $function;
+        static::$data[$event]['tasks'][] = $function;
+
+        if (!isset(static::$data[$event]['fired'])) {
+            static::$data[$event]['fired'] = false;
+        }
+
+        if ($autorun === true) {
+            if (static::hasRun($event)) {
+                call_user_func($function, ...static::$data[$event]['params']);
+            }
+        } elseif (static::hasRun($event)) {
+            trigger_error('OSCOM\Event::watch(): Event has already run: ' . $event);
+        }
     }
 
     public static function fire(string $event, ...$params)
     {
-        if (isset(static::$data[$event])) {
-            foreach (static::$data[$event] as $f) {
+        static::$data[$event]['fired'] = true;
+        static::$data[$event]['params'] = $params;
+
+        if (isset(static::$data[$event]['tasks'])) {
+            foreach (static::$data[$event]['tasks'] as $f) {
                 call_user_func($f, ...$params);
             }
         }
+    }
+
+    public static function hasRun(string $event): bool
+    {
+        return static::$data[$event]['fired'];
+    }
+
+    public static function getRan(): array
+    {
+        $result = [];
+
+        foreach (static::$data as $event => $watches) {
+            if ($watches['fired'] === true) {
+                $result[] = $event;
+            }
+        }
+
+        return $result;
     }
 
     public static function scan()
