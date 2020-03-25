@@ -261,7 +261,7 @@ class PDO
                                 }
                             }
                         } else {
-                            $statement .= $key . ' = ' . $value['rel'];
+                            $statement .= $key . ' ' . (isset($value['op']) ? $value['op'] : '=') . ' ' . $value['rel'];
                         }
                     }
                 } else {
